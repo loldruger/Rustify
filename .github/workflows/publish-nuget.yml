@@ -29,29 +29,75 @@ jobs:
       - name: Extract Version from .csproj
         id: get_version
         run: |
-          $version = ([xml](Get-Content -Path Rustify.csproj)).Project.PropertyGroup.Version
+          $ErrorActionPreference = "Stop"
+          Write-Host "Current directory: $(Get-Location)"
+          Write-Host "Listing files in current directory:"
+          Get-ChildItem
+
+          $projectFilePath = "Rustify.csproj"
+          if (-not (Test-Path $projectFilePath)) {
+            Write-Error "$projectFilePath not found!"
+            exit 1
+          }
+          
+          $version = ""
+          try {
+            $projectFileContent = Get-Content -Path $projectFilePath -Raw
+            $xml = [xml]$projectFileContent
+            $version = $xml.Project.PropertyGroup.Version
+          } catch {
+            Write-Error "Failed to parse version from $projectFilePath. Error: $_"
+            exit 1
+          }
+
+          if (-not $version) {
+            Write-Error "Version could not be extracted or is empty in $projectFilePath."
+            exit 1
+          }
+          
+          Write-Host "Successfully extracted version: '$version'"
           echo "VERSION=$version" >> $GITHUB_OUTPUT
         shell: pwsh
 
       - name: Create Git Tag if version changed
-        run: |
-          VERSION=${{ steps.get_version.outputs.VERSION }}
-          TAG_NAME="v$VERSION"
-          echo "Checking for tag $TAG_NAME from version $VERSION"
-          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
-            echo "Tag $TAG_NAME already exists locally. Skipping tag creation."
-          else
-            echo "Tag $TAG_NAME does not exist. Creating tag..."
-            git config user.name "${{ github.actor }}"
-            git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
-            git tag "$TAG_NAME" -m "Release version $TAG_NAME"
-            echo "Created tag $TAG_NAME"
-            echo "Pushing tag $TAG_NAME..."
-            git push origin "$TAG_NAME"
-            echo "Pushed tag $TAG_NAME"
-          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $extractedVersion = "${{ steps.get_version.outputs.VERSION }}"
+          
+          Write-Host "Version received from 'Extract Version' step: '$extractedVersion'"
+
+          if (-not $extractedVersion) {
+            Write-Error "Error: Extracted version is empty. Cannot create tag."
+            exit 1
+          }
+
+          $tagName = "v$extractedVersion"
+          Write-Host "Attempting to create or check tag: '$tagName'"
+
+          $tagExistsLocally = $false
+          try {
+            git rev-parse $tagName | Out-Null
+            $tagExistsLocally = $true
+          } catch {
+            
+          }
+
+          if ($tagExistsLocally) {
+            Write-Host "Tag '$tagName' already exists locally. Skipping tag creation and push."
+          } else {
+            Write-Host "Tag '$tagName' does not exist locally. Creating tag..."
+            git config user.name "${{ github.actor }}"
+            git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+            git tag "$tagName" -m "Release version $tagName"
+            Write-Host "Created tag '$tagName' locally."
+
+            Write-Host "Pushing tag '$tagName' to origin..."
+            git push origin "$tagName"
+            Write-Host "Successfully pushed tag '$tagName'."
+          }
+        shell: pwsh
 
       - name: Restore dependencies
         run: dotnet restore Rustify.csproj

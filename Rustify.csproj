@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>Rustify</PackageId>
-    <Version>0.2.2</Version>
+    <Version>0.2.3</Version>
     <Authors>loldruger</Authors>
     <Company>Ingeniumatics.ai</Company>
     <Description>Rustify Your C# Project!</Description>
