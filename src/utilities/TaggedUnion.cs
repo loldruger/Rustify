@@ -1,3 +1,5 @@
+using System;
+
 namespace Rustify.Utilities
 {
     public static class TaggedUnion
@@ -25,7 +27,7 @@ namespace Rustify.Utilities
         public static TaggedUnion<A> __0(A b) => new(0, b);
         public static implicit operator TaggedUnion<A>(A a) => __0(a);
 
-        public R Match<R>(Func<A, R> _0)
+        public R Match<R>(System.Func<A, R> _0)
         {
             return this.tag switch
             {
