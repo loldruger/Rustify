@@ -18,7 +18,7 @@ You can install Rustify via NuGet Package Manager:
 Install-Package Rustify
 ```
 
-Or via .NET CLI: 
+Or via .NET CLI:
 
 ```powershell
 dotnet add package Rustify
