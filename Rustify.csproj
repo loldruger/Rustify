@@ -1,6 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <PackageId>Rustify</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>loldruger</Authors>
+    <Company>Ingeniumatics.ai</Company>
+    <Description>Rustify Your C# Project!</Description>
+    <RepositoryUrl>https://github.com/loldruger/Rustify</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
