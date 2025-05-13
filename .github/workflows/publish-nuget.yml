@@ -56,8 +56,17 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore Rustify.csproj
 
+      - name: Build for .NET 7.0
+        run: dotnet build Rustify.csproj --configuration Release --no-restore -f net7.0
+
+      - name: Build for .NET 8.0
+        run: dotnet build Rustify.csproj --configuration Release --no-restore -f net8.0
+
+      - name: Build for .NET 9.0
+        run: dotnet build Rustify.csproj --configuration Release --no-restore -f net9.0
+
       - name: Pack
-        run: dotnet pack Rustify.csproj --configuration Release --output ./nupkgs
+        run: dotnet pack Rustify.csproj --configuration Release --no-build --output ./nupkgs
 
       - name: Publish to GitHub Packages
         run: dotnet nuget push ./nupkgs/*.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" --skip-duplicate
