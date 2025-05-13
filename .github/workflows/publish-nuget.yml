@@ -81,12 +81,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $ErrorActionPreference = "Stop"
+          $ErrorActionPreference = "Stop" # Stop on terminating errors for subsequent commands
           $extractedVersion = "${{ steps.get_version.outputs.VERSION }}"
           
           Write-Host "Version received from 'Extract Version' step: '$extractedVersion'"
 
-          if (-not $extractedVersion) {
+          if ([string]::IsNullOrWhiteSpace($extractedVersion)) {
             Write-Error "Error: Extracted version is empty. Cannot create tag."
             exit 1
           }
@@ -94,18 +94,33 @@ jobs:
           $tagName = "v$extractedVersion"
           Write-Host "Attempting to create or check tag: '$tagName'"
 
-          $tagExistsLocally = $false
-          try {
-            git rev-parse $tagName | Out-Null
-            $tagExistsLocally = $true
-          } catch {
-            
-          }
+          $tagExists = $false
+          $originalErrorActionPreference = $ErrorActionPreference
+          $ErrorActionPreference = "SilentlyContinue"
 
-          if ($tagExistsLocally) {
-            Write-Host "Tag '$tagName' already exists locally. Skipping tag creation and push."
+          Write-Host "Checking for local tag '$tagName'..."
+          git show-ref --verify --quiet "refs/tags/$tagName"
+          if ($LASTEXITCODE -eq 0) {
+            $tagExists = $true
+            Write-Host "Tag '$tagName' found locally."
           } else {
-            Write-Host "Tag '$tagName' does not exist locally. Creating tag..."
+            Write-Host "Tag '$tagName' not found locally. Checking remote 'origin'..."
+            git ls-remote --exit-code --tags origin "refs/tags/$tagName"
+            if ($LASTEXITCODE -eq 0) {
+                $tagExists = $true
+                Write-Host "Tag '$tagName' found on remote 'origin'."
+            } else {
+                Write-Host "Tag '$tagName' not found on remote 'origin' either."
+            }
+          }
+          
+          $ErrorActionPreference = $originalErrorActionPreference
+
+          if ($tagExists) {
+            Write-Host "Tag '$tagName' already exists (locally or remotely). Skipping tag creation and push."
+          } else {
+            Write-Host "Tag '$tagName' does not exist. Creating tag..."
+            $ErrorActionPreference = "Stop" # Ensure critical git commands stop script on failure
             git config user.name "${{ github.actor }}"
             git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
             git tag "$tagName" -m "Release version $tagName"
