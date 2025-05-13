@@ -15,7 +15,7 @@
     "D:\\packages\\NuGet\\cache": {}
   },
   "project": {
-    "version": "0.2.0",
+    "version": "0.2.1",
     "restore": {
       "projectUniqueName": "D:\\Rustify\\Rustify.csproj",
       "projectName": "Rustify",

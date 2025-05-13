@@ -2,17 +2,21 @@
 
   <PropertyGroup>
     <PackageId>Rustify</PackageId>
-    <Version>0.2.0</Version>
+    <Version>0.2.1</Version>
     <Authors>loldruger</Authors>
     <Company>Ingeniumatics.ai</Company>
     <Description>Rustify Your C# Project!</Description>
     <RepositoryUrl>https://github.com/loldruger/Rustify</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     
     <TargetFrameworks>net7.0;net8.0;net9.0</TargetFrameworks>
-    <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\"/>
+  </ItemGroup>
 
 </Project>

@@ -12,43 +12,54 @@ jobs:
   build-and-publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'
 
-      - name: Restore dependencies
-        run: dotnet restore
+      - name: Extract Version from .csproj
+        id: get_version
+        run: |
+          $version = ([xml](Get-Content -Path Rustify.csproj)).Project.PropertyGroup.Version
+          echo "VERSION=$version" >> $GITHUB_OUTPUT
+        shell: pwsh
 
-      - name: Build
-        run: dotnet build --configuration Release --no-restore
+      - name: Create Git Tag if version changed
+        run: |
+          VERSION=${{ steps.get_version.outputs.VERSION }}
+          TAG_NAME="v$VERSION"
+          echo "Checking for tag $TAG_NAME from version $VERSION"
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Tag $TAG_NAME already exists locally. Skipping tag creation."
+          else
+            echo "Tag $TAG_NAME does not exist. Creating tag..."
+            git config user.name "${{ github.actor }}"
+            git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+            git tag "$TAG_NAME" -m "Release version $TAG_NAME"
+            echo "Created tag $TAG_NAME"
+            echo "Pushing tag $TAG_NAME..."
+            git push origin "$TAG_NAME"
+            echo "Pushed tag $TAG_NAME"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Restore dependencies
+        run: dotnet restore Rustify.csproj
 
       - name: Pack
-        run: |
-          PACKAGE_VERSION=""
-          if [[ $GITHUB_REF == refs/tags/v* ]]; then
-            PACKAGE_VERSION=${GITHUB_REF#refs/tags/v}
-          fi
-
-          if [[ -z "$PACKAGE_VERSION" && $GITHUB_REF == refs/tags/* ]]; then
-            PACKAGE_VERSION=${GITHUB_REF#refs/tags/}
-          fi
-          
-          if [[ -z "$PACKAGE_VERSION" ]]; then
-            dotnet pack --configuration Release --no-build --output ./nupkgs
-          else
-            dotnet pack --configuration Release --no-build --output ./nupkgs -p:PackageVersion=$PACKAGE_VERSION
-          fi
+        run: dotnet pack Rustify.csproj --configuration Release --output ./nupkgs
 
       - name: Publish to GitHub Packages
-        if: always()
         run: dotnet nuget push ./nupkgs/*.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" --skip-duplicate
 
       - name: Publish to NuGet.org

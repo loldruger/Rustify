@@ -1,3 +1,7 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+
 using Rustify.Monads;
 
 namespace Rustify.Utilities.Sync
@@ -75,7 +79,7 @@ namespace Rustify.Utilities.Sync
             where U : notnull
             where E : notnull
         {
-            await Task.Run(() => this.mutex.WaitOne()); // Changed from Lock() and wrapped in Task.Run for async
+            await Task.Run(this.mutex.WaitOne); // Changed from Lock() and wrapped in Task.Run for async
             try
             {
                 return Result<Result<U, E>, GenericMutexError>.Ok(await action(this.value));
