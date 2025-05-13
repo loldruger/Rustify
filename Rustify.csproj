@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <PackageId>Rustify</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>loldruger</Authors>
     <Company>Ingeniumatics.ai</Company>
     <Description>Rustify Your C# Project!</Description>
@@ -10,7 +10,7 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFrameworks>net7.0;net8.0;net9.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>

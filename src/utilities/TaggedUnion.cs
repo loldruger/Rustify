@@ -1,6 +1,4 @@
-using System;
-
-namespace Rustify.GenericUtilities
+namespace Rustify.Utilities
 {
     public static class TaggedUnion
     {

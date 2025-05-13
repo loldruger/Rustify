@@ -1,11 +1,8 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Rustify.GenericInterfaces;
-using Rustify.GenericUtilities.Synchronizer;
+using Rustify.Interfaces;
+using Rustify.Utilities.Synchronizer;
 using Rustify.Monads;
 
-namespace Rustify.GenericUtilities.Sync
+namespace Rustify.Utilities.Sync
 {
     /// <summary>
     /// Provides asynchronous read-write lock functionality around a value of type T.

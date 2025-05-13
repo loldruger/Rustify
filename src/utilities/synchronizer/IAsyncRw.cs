@@ -1,8 +1,6 @@
-using System;
-using System.Threading.Tasks;
 using Rustify.Monads;
 
-namespace Rustify.GenericUtilities.Synchronizer
+namespace Rustify.Utilities.Synchronizer
 {
     public interface IAsyncRw<T> : IAsync<T> where T : notnull
     {

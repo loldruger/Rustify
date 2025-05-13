@@ -1,7 +1,6 @@
-using System;
 using Rustify.Monads;
 
-namespace Rustify.GenericUtilities.Synchronizer
+namespace Rustify.Utilities.Synchronizer
 {
     public interface ISync<T> : ISynchronizer<T> where T : notnull
     {

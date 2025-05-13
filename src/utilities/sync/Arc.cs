@@ -1,9 +1,9 @@
 using System;
 using System.Threading;
-using Rustify.GenericInterfaces;
+using Rustify.Interfaces;
 using Rustify.Monads;
 
-namespace Rustify.GenericUtilities.Sync
+namespace Rustify.Utilities.Sync
 {
     public class Arc<T> : IClone<Arc<T>>, IDisposable where T : notnull
     {
@@ -72,10 +72,8 @@ namespace Rustify.GenericUtilities.Sync
 
         public void Dispose()
         {
-            // Dispose를 호출하면 참조 카운트 감소
             this.Release();
 
-            // 필요시 Dispose 호출된 것을 GC에 알림
             GC.SuppressFinalize(this);
         }
     }

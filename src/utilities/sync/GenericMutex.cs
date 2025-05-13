@@ -1,9 +1,6 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using Rustify.Monads;
 
-namespace Rustify.GenericUtilities.Sync
+namespace Rustify.Utilities.Sync
 {
     public enum GenericMutexError
     {
@@ -12,10 +9,15 @@ namespace Rustify.GenericUtilities.Sync
         UnknownError
     }
 
-    public partial class GenericMutex<T>(T value) where T : notnull
+    public partial class GenericMutex<T> where T : notnull
     {
         readonly Mutex mutex = new();
-        private T value = value;
+        private T value;
+
+        public GenericMutex(T value)
+        {
+            this.value = value;
+        }
 
         /// <summary>
         /// Attempts to lock the mutex and retrieve the value.

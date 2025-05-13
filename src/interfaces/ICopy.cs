@@ -1,4 +1,4 @@
-namespace Rustify.GenericInterfaces
+namespace Rustify.Interfaces
 {
     public interface ICopy<T> where T : notnull
     {

@@ -1,4 +1,4 @@
-namespace Rustify.GenericUtilities
+namespace Rustify.Utilities
 {
     public readonly struct Unit
     {

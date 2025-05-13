@@ -1,6 +1,6 @@
 using Rustify.Monads;
 
-namespace Rustify.GenericUtilities.Synchronizer
+namespace Rustify.Utilities.Synchronizer
 {
     public enum ISynchronizerError
     {

@@ -48,7 +48,7 @@ jobs:
           fi
 
       - name: Publish to GitHub Packages
-        if: always() # 또는 github.event_name == 'push'
+        if: always()
         run: dotnet nuget push ./nupkgs/*.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" --skip-duplicate
 
       - name: Publish to NuGet.org
