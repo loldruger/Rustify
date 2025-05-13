@@ -30,33 +30,51 @@ jobs:
         id: get_version
         run: |
           $ErrorActionPreference = "Stop"
+          Write-Host "Extract Version Step: Initializing..."
           Write-Host "Current directory: $(Get-Location)"
-          Write-Host "Listing files in current directory:"
-          Get-ChildItem
+          Write-Host "Listing files in current directory (root of checkout):"
+          Get-ChildItem -Path "./"
 
           $projectFilePath = "Rustify.csproj"
+          Write-Host "Project file path: $projectFilePath"
+
           if (-not (Test-Path $projectFilePath)) {
-            Write-Error "$projectFilePath not found!"
+            Write-Error "Error: Project file '$projectFilePath' not found in current directory '$(Get-Location)'."
             exit 1
           }
-          
-          $version = ""
+          Write-Host "Project file '$projectFilePath' found."
+
+          $versionValue = ""
           try {
             $projectFileContent = Get-Content -Path $projectFilePath -Raw
-            $xml = [xml]$projectFileContent
-            $version = $xml.Project.PropertyGroup.Version
+            
+            $xmlDoc = [xml]$projectFileContent
+            $versionNode = $xmlDoc.Project.PropertyGroup.Version
+            
+            if ($null -eq $versionNode) {
+              Write-Error "Error: <Version> XML node not found in '$projectFilePath'."
+              exit 1
+            }
+            
+            $versionValue = $versionNode.Trim()
+            Write-Host "Raw version string from XML: '$($xmlDoc.Project.PropertyGroup.Version)'"
+            Write-Host "Trimmed version string: '$versionValue'"
+
           } catch {
-            Write-Error "Failed to parse version from $projectFilePath. Error: $_"
+            Write-Error "Error: Failed to parse version from '$projectFilePath'. Exception: $($_.Exception.Message)"
             exit 1
           }
 
-          if (-not $version) {
-            Write-Error "Version could not be extracted or is empty in $projectFilePath."
+          if ([string]::IsNullOrWhiteSpace($versionValue)) {
+            Write-Error "Error: Version extracted from '$projectFilePath' is null, empty, or whitespace."
             exit 1
           }
+
+          Write-Host "Successfully extracted version: '$versionValue'"
           
-          Write-Host "Successfully extracted version: '$version'"
-          echo "VERSION=$version" >> $GITHUB_OUTPUT
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "VERSION=$versionValue"
+          Write-Host "Attempted to set output VERSION to '$versionValue'"
+          Write-Host "Extract Version Step: Finalizing."
         shell: pwsh
 
       - name: Create Git Tag if version changed
