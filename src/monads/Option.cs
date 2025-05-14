@@ -175,7 +175,7 @@ namespace Rustify.Monads
             return !(left == right);
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             return obj is Option<T> option && this == option;
         }

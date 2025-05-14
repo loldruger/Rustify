@@ -1,0 +1,12 @@
+D:\Rustify\bin\Debug\net8.0\Rustify.deps.json
+D:\Rustify\bin\Debug\net8.0\Rustify.dll
+D:\Rustify\bin\Debug\net8.0\Rustify.pdb
+D:\Rustify\obj\Debug\net8.0\Rustify.GeneratedMSBuildEditorConfig.editorconfig
+D:\Rustify\obj\Debug\net8.0\Rustify.AssemblyInfoInputs.cache
+D:\Rustify\obj\Debug\net8.0\Rustify.AssemblyInfo.cs
+D:\Rustify\obj\Debug\net8.0\Rustify.csproj.CoreCompileInputs.cache
+D:\Rustify\obj\Debug\net8.0\Rustify.sourcelink.json
+D:\Rustify\obj\Debug\net8.0\Rustify.dll
+D:\Rustify\obj\Debug\net8.0\refint\Rustify.dll
+D:\Rustify\obj\Debug\net8.0\Rustify.pdb
+D:\Rustify\obj\Debug\net8.0\ref\Rustify.dll

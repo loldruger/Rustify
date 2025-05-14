@@ -29,12 +29,16 @@ namespace Rustify.Utilities.Sync
                 int newCount = Interlocked.Decrement(ref this.count);
                 if (newCount == 0)
                 {
-                    if (this.value is IDisposable disposable)
+                    if (this.value.IsSome()) // Check if there's a value within the Option
                     {
-                        disposable.Dispose();
+                        T actualValue = this.value.Unwrap(); // Get the actual value
+                        if (actualValue is IDisposable disposableValue) // Check if the actual value is IDisposable
+                        {
+                            disposableValue.Dispose();
+                        }
                     }
-                    this.value = Option.None<T>();
-                    this.isDisposed = true;
+                    this.value = Option.None<T>(); // Clear the Option
+                    this.isDisposed = true;        // Mark the Arc itself as disposed
                 }
                 return newCount;
             }
