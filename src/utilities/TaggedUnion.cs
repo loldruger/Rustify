@@ -9,7 +9,6 @@ namespace Rustify.Utilities
         {
             return TaggedUnion<A>.__0(a);
         }
-
     }
 
     public readonly struct TaggedUnion<A>
