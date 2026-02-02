@@ -27,10 +27,9 @@ public sealed class OptionTests // Class name changed for clarity
     }
 
     [TestMethod]
-    [ExpectedException(typeof(ArgumentNullException))]
     public void Option_Some_ThrowsOnNullValue()
     {
-        _ = Option.Some<string>(null!);
+        Assert.Throws<ArgumentNullException>(() => Option.Some<string>(null!));
     }
 
     [TestMethod]
@@ -63,11 +62,10 @@ public sealed class OptionTests // Class name changed for clarity
     }
 
     [TestMethod]
-    [ExpectedException(typeof(InvalidOperationException))]
     public void Unwrap_ThrowsException_WhenNone()
     {
         var option = Option.None<int>();
-        option.Unwrap();
+        Assert.Throws<InvalidOperationException>(() => option.Unwrap());
     }
 
     [TestMethod]
@@ -349,11 +347,10 @@ public sealed class OptionTests // Class name changed for clarity
     }
 
     [TestMethod]
-    [ExpectedException(typeof(InvalidOperationException))]
     public void Expect_ThrowsWithMessage_WhenNone()
     {
         var option = Option.None<int>();
-        option.Expect("Custom error message");
+        Assert.Throws<InvalidOperationException>(() => option.Expect("Custom error message"));
     }
 
     [TestMethod]

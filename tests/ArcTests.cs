@@ -63,8 +63,8 @@ public sealed class ArcTests
         Assert.AreEqual(0, countAfterRelease2);
 
         // After all releases, GetValue should throw
-        Assert.ThrowsException<InvalidOperationException>(() => arc1.GetValue());
-        Assert.ThrowsException<InvalidOperationException>(() => arc2.GetValue()); // arc2 is also effectively disposed
+        Assert.Throws<InvalidOperationException>(() => arc1.GetValue());
+        Assert.Throws<InvalidOperationException>(() => arc2.GetValue()); // arc2 is also effectively disposed
     }
 
     [TestMethod]
@@ -78,8 +78,8 @@ public sealed class ArcTests
         Assert.AreEqual(data, arcClone.GetValue()); // Clone should still be valid
 
         arcClone.Dispose(); // Releases clone's reference, object should be disposed
-        Assert.ThrowsException<InvalidOperationException>(() => arc.GetValue());
-        Assert.ThrowsException<InvalidOperationException>(() => arcClone.GetValue());
+        Assert.Throws<InvalidOperationException>(() => arc.GetValue());
+        Assert.Throws<InvalidOperationException>(() => arcClone.GetValue());
     }
 
     [TestMethod]
@@ -89,7 +89,7 @@ public sealed class ArcTests
         var arc = new Arc<string>(data);
         arc.Release(); // Release the initial reference
 
-        Assert.ThrowsException<InvalidOperationException>(() => arc.GetValue());
+        Assert.Throws<InvalidOperationException>(() => arc.GetValue());
     }
 
     [TestMethod]
@@ -99,7 +99,7 @@ public sealed class ArcTests
         var arc = new Arc<string>(data);
         arc.Release(); // Release the initial reference
 
-        Assert.ThrowsException<InvalidOperationException>(() => arc.Clone());
+        Assert.Throws<InvalidOperationException>(() => arc.Clone());
     }
 
     [TestMethod]
@@ -110,7 +110,7 @@ public sealed class ArcTests
         arc.Release(); // Count becomes 0
         var finalCount = arc.Release(); // Should not go negative, still 0 and disposed
         Assert.AreEqual(0, finalCount);
-        Assert.ThrowsException<InvalidOperationException>(() => arc.GetValue());
+        Assert.Throws<InvalidOperationException>(() => arc.GetValue());
     }
 
     [TestMethod]
@@ -162,7 +162,7 @@ public sealed class ArcTests
         // Here, we test the main 'arc' reference.
         Assert.AreEqual(data, arc.GetValue()); 
         arc.Release(); // Release the original reference
-        Assert.ThrowsException<InvalidOperationException>(() => arc.GetValue());
+        Assert.Throws<InvalidOperationException>(() => arc.GetValue());
     }
 
      [TestMethod]
@@ -179,7 +179,7 @@ public sealed class ArcTests
         Assert.AreEqual(data, arcClone.GetValue()); // Clone still valid
 
         arcClone.Release();
-        Assert.ThrowsException<InvalidOperationException>(() => arc.GetValue());
-        Assert.ThrowsException<InvalidOperationException>(() => arcClone.GetValue());
+        Assert.Throws<InvalidOperationException>(() => arc.GetValue());
+        Assert.Throws<InvalidOperationException>(() => arcClone.GetValue());
     }
 }

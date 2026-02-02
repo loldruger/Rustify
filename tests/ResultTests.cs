@@ -56,11 +56,10 @@ public sealed class ResultTests
     }
 
     [TestMethod]
-    [ExpectedException(typeof(InvalidOperationException))]
     public void Unwrap_ThrowsException_WhenErr()
     {
         var result = Result.Err<int, string>(DefaultError);
-        result.Unwrap();
+        Assert.Throws<InvalidOperationException>(() => result.Unwrap());
     }
 
     [TestMethod]
@@ -72,11 +71,10 @@ public sealed class ResultTests
     }
 
     [TestMethod]
-    [ExpectedException(typeof(InvalidOperationException))]
     public void UnwrapErr_ThrowsException_WhenOk()
     {
         var result = Result.Ok<int, string>(123);
-        result.UnwrapErr();
+        Assert.Throws<InvalidOperationException>(() => result.UnwrapErr());
     }
 
     [TestMethod]
@@ -341,11 +339,10 @@ public sealed class ResultTests
     }
 
     [TestMethod]
-    [ExpectedException(typeof(InvalidOperationException))]
     public void Expect_ThrowsWithMessage_WhenErr()
     {
         var result = Result.Err<int, string>("error");
-        result.Expect("Custom error message");
+        Assert.Throws<InvalidOperationException>(() => result.Expect("Custom error message"));
     }
 
     [TestMethod]
@@ -371,11 +368,10 @@ public sealed class ResultTests
     }
 
     [TestMethod]
-    [ExpectedException(typeof(InvalidOperationException))]
     public void ExpectErr_ThrowsWithMessage_WhenOk()
     {
         var result = Result.Ok<int, string>(42);
-        result.ExpectErr("Custom error message");
+        Assert.Throws<InvalidOperationException>(() => result.ExpectErr("Custom error message"));
     }
 
     [TestMethod]

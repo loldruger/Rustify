@@ -54,10 +54,9 @@ public sealed class RwLockTests
     }
 
     [TestMethod]
-    [ExpectedException(typeof(ArgumentNullException))]
     public void RwLock_Creation_ThrowsOnNullInitialValue()
     {
-        _ = new RwLock<CloneableData>(null!);
+        Assert.Throws<ArgumentNullException>(() => new RwLock<CloneableData>(null!));
     }
 
     [TestMethod]
@@ -175,7 +174,7 @@ public sealed class RwLockTests
         // Check values read by the reader task - some might be initial, some updated
         var readValues = await readerTask;
         Assert.IsTrue(readValues.Any(v => v.Value == initialData.Value || v.Value == finalValue));
-        Assert.IsTrue(readValues.Last().Value == finalValue); // Last read should see the final value
+        Assert.AreEqual(finalValue, readValues.Last().Value); // Last read should see the final value
     }
 
     [TestMethod]
