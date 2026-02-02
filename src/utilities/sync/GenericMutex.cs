@@ -13,103 +13,240 @@ namespace Rustify.Utilities.Sync
         UnknownError
     }
 
-    public partial class GenericMutex<T> where T : notnull
+    public class GenericMutex<T> : IDisposable where T : notnull
     {
-        readonly Mutex mutex = new();
+        private readonly SemaphoreSlim semaphore = new(1, 1);
         private T value;
+        private bool disposed = false;
 
         public GenericMutex(T value)
         {
             this.value = value;
         }
 
-        /// <summary>
-        /// Attempts to lock the mutex and retrieve the value.
-        /// without blocking if the mutex is already locked.
-        /// </summary>
         public Result<T, GenericMutexError> TryGetValue()
         {
-            if (this.mutex.WaitOne(0)) // Changed from TryLock()
+            if (this.disposed) return Result<T, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+
+            if (this.semaphore.Wait(0))
             {
                 try
                 {
                     return Result<T, GenericMutexError>.Ok(this.value);
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Mutex operation failed: {ex.Message}");
-                    return Result<T, GenericMutexError>.Err(GenericMutexError.MutexFailed);
-                }
                 finally
                 {
-                    this.mutex.ReleaseMutex(); // Changed from Unlock()
+                    this.semaphore.Release();
                 }
             }
 
             return Result<T, GenericMutexError>.Err(GenericMutexError.MutexLocked);
         }
 
-        /// <summary>
-        /// Calls the provided action with the value of the mutex, ensuring that the mutex is locked during the call.
-        /// </summary>
+        public async Task<Result<T, GenericMutexError>> TryGetValueAsync(CancellationToken cancellationToken = default)
+        {
+            if (this.disposed) return Result<T, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+
+            try
+            {
+                if (await this.semaphore.WaitAsync(0, cancellationToken).ConfigureAwait(false))
+                {
+                    try
+                    {
+                        return Result<T, GenericMutexError>.Ok(this.value);
+                    }
+                    finally
+                    {
+                        this.semaphore.Release();
+                    }
+                }
+
+                return Result<T, GenericMutexError>.Err(GenericMutexError.MutexLocked);
+            }
+            catch (OperationCanceledException)
+            {
+                return Result<T, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+            }
+        }
+
+        public Result<T, GenericMutexError> GetValue()
+        {
+            if (this.disposed) return Result<T, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+
+            try
+            {
+                this.semaphore.Wait();
+                try
+                {
+                    return Result<T, GenericMutexError>.Ok(this.value);
+                }
+                finally
+                {
+                    this.semaphore.Release();
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+                return Result<T, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+            }
+        }
+
+        public async Task<Result<T, GenericMutexError>> GetValueAsync(CancellationToken cancellationToken = default)
+        {
+            if (this.disposed) return Result<T, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+
+            try
+            {
+                await this.semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    return Result<T, GenericMutexError>.Ok(this.value);
+                }
+                finally
+                {
+                    this.semaphore.Release();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                return Result<T, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+            }
+            catch (ObjectDisposedException)
+            {
+                return Result<T, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+            }
+        }
+
         public Result<Result<U, E>, GenericMutexError> WithLock<U, E>(Func<T, Result<U, E>> action)
             where U : notnull
             where E : notnull
         {
-            this.mutex.WaitOne(); // Changed from Lock()
+            if (this.disposed) return Result<Result<U, E>, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+
             try
             {
-                return Result<Result<U, E>, GenericMutexError>.Ok(action(this.value));
+                this.semaphore.Wait();
+                try
+                {
+                    return Result<Result<U, E>, GenericMutexError>.Ok(action(this.value));
+                }
+                finally
+                {
+                    this.semaphore.Release();
+                }
             }
-            catch (Exception ex)
+            catch (ObjectDisposedException)
             {
-                Console.WriteLine($"Mutex operation failed: {ex.Message}");
                 return Result<Result<U, E>, GenericMutexError>.Err(GenericMutexError.MutexFailed);
             }
-            finally
+            catch (Exception)
             {
-                this.mutex.ReleaseMutex(); // Changed from Unlock()
+                return Result<Result<U, E>, GenericMutexError>.Err(GenericMutexError.MutexFailed);
             }
         }
 
-        /// <summary>
-        /// Calls the provided action with the value of the mutex, ensuring that the mutex is locked during the call.
-        /// </summary>
-        public async Task<Result<Result<U, E>, GenericMutexError>> WithLockAsync<U, E>(Func<T, Task<Result<U, E>>> action)
+        public async Task<Result<Result<U, E>, GenericMutexError>> WithLockAsync<U, E>(
+            Func<T, Task<Result<U, E>>> action,
+            CancellationToken cancellationToken = default)
             where U : notnull
             where E : notnull
         {
-            await Task.Run(this.mutex.WaitOne); // Changed from Lock() and wrapped in Task.Run for async
+            if (this.disposed) return Result<Result<U, E>, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+
             try
             {
-                return Result<Result<U, E>, GenericMutexError>.Ok(await action(this.value));
+                await this.semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    return Result<Result<U, E>, GenericMutexError>.Ok(await action(this.value).ConfigureAwait(false));
+                }
+                finally
+                {
+                    this.semaphore.Release();
+                }
             }
-            catch (Exception ex)
+            catch (OperationCanceledException)
             {
-                Console.WriteLine($"Mutex operation failed: {ex.Message}");
                 return Result<Result<U, E>, GenericMutexError>.Err(GenericMutexError.MutexFailed);
             }
-            finally
+            catch (ObjectDisposedException)
             {
-                this.mutex.ReleaseMutex(); // Changed from Unlock()
+                return Result<Result<U, E>, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+            }
+            catch (Exception)
+            {
+                return Result<Result<U, E>, GenericMutexError>.Err(GenericMutexError.MutexFailed);
             }
         }
 
-        /// <summary>
-        /// Updates the value of the mutex using the provided function, ensuring that the mutex is locked during the update.
-        /// </summary>
-        public Unit UpdateValue(Func<T, T> f)
+        public Result<Unit, GenericMutexError> UpdateValue(Func<T, T> f)
         {
-            this.mutex.WaitOne(); // Changed from Lock()
+            if (this.disposed) return Result<Unit, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+
             try
             {
-                this.value = f(this.value);
-                return Unit.New;
+                this.semaphore.Wait();
+                try
+                {
+                    this.value = f(this.value);
+                    return Result<Unit, GenericMutexError>.Ok(Unit.Value);
+                }
+                finally
+                {
+                    this.semaphore.Release();
+                }
             }
-            finally
+            catch (ObjectDisposedException)
             {
-                this.mutex.ReleaseMutex(); // Changed from Unlock()
+                return Result<Unit, GenericMutexError>.Err(GenericMutexError.MutexFailed);
             }
+            catch (Exception)
+            {
+                return Result<Unit, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+            }
+        }
+
+        public async Task<Result<Unit, GenericMutexError>> UpdateValueAsync(
+            Func<T, T> f,
+            CancellationToken cancellationToken = default)
+        {
+            if (this.disposed) return Result<Unit, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+
+            try
+            {
+                await this.semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    this.value = f(this.value);
+                    return Result<Unit, GenericMutexError>.Ok(Unit.Value);
+                }
+                finally
+                {
+                    this.semaphore.Release();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                return Result<Unit, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+            }
+            catch (ObjectDisposedException)
+            {
+                return Result<Unit, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+            }
+            catch (Exception)
+            {
+                return Result<Unit, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+            }
+        }
+
+        public void Dispose()
+        {
+            if (this.disposed) return;
+
+            this.disposed = true;
+            this.semaphore.Dispose();
+
+            GC.SuppressFinalize(this);
         }
     }
 }

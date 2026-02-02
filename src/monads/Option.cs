@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace Rustify.Monads
 {
@@ -19,7 +21,7 @@ namespace Rustify.Monads
         }
     }
 
-    public readonly struct Option<T> where T : notnull
+    public readonly struct Option<T> : IEnumerable<T> where T : notnull
     {
         private readonly byte tag;
         private readonly T value;
@@ -62,6 +64,16 @@ namespace Rustify.Monads
             return this.value;
         }
 
+        public T Expect(string message)
+        {
+            if (this.tag == 0)
+            {
+                throw new InvalidOperationException(message);
+            }
+
+            return this.value;
+        }
+
         public T UnwrapOr(T fallback)
         {
             if (this.tag == 0)
@@ -82,6 +94,16 @@ namespace Rustify.Monads
             return this.value;
         }
 
+        public T? UnwrapOrDefault()
+        {
+            if (this.tag == 0)
+            {
+                return default;
+            }
+
+            return this.value;
+        }
+
         public Option<U> Map<U>(Func<T, U> f) where U : notnull
         {
             if (this.tag != 0)
@@ -90,6 +112,26 @@ namespace Rustify.Monads
             }
 
             return Option<U>.None;
+        }
+
+        public U MapOr<U>(U defaultValue, Func<T, U> f)
+        {
+            if (this.tag != 0)
+            {
+                return f(this.value);
+            }
+
+            return defaultValue;
+        }
+
+        public U MapOrElse<U>(Func<U> defaultFn, Func<T, U> f)
+        {
+            if (this.tag != 0)
+            {
+                return f(this.value);
+            }
+
+            return defaultFn();
         }
 
         public Option<U> AndThen<U>(Func<T, Option<U>> f) where U : notnull
@@ -102,6 +144,16 @@ namespace Rustify.Monads
             return Option<U>.None;
         }
 
+        public Option<T> Or(Option<T> other)
+        {
+            if (this.tag != 0)
+            {
+                return this;
+            }
+
+            return other;
+        }
+
         public Option<T> OrElse(Func<Option<T>> fallback)
         {
             if (this.tag == 0)
@@ -112,13 +164,42 @@ namespace Rustify.Monads
             return this;
         }
 
-        /// <summary>
-        /// Transforms the Option into a Result, Some(v) becomes Ok(v), None becomes Err(err) using the provided default err value.
-        /// </summary>
-        /// <typeparam name="E"></typeparam>
-        /// <param name="error"></param>
-        /// <returns></returns>
-        /// <exception cref="InvalidOperationException"></exception>
+        public Option<T> Xor(Option<T> other)
+        {
+            if (this.tag != 0 && other.tag == 0)
+            {
+                return this;
+            }
+            if (this.tag == 0 && other.tag != 0)
+            {
+                return other;
+            }
+
+            return Option<T>.None;
+        }
+
+        public Option<(T, U)> Zip<U>(Option<U> other) where U : notnull
+        {
+            if (this.tag != 0 && other.IsSome())
+            {
+                return Option<(T, U)>.Some((this.value, other.Unwrap()));
+            }
+
+            return Option<(T, U)>.None;
+        }
+
+        public Option<R> ZipWith<U, R>(Option<U> other, Func<T, U, R> f)
+            where U : notnull
+            where R : notnull
+        {
+            if (this.tag != 0 && other.IsSome())
+            {
+                return Option<R>.Some(f(this.value, other.Unwrap()));
+            }
+
+            return Option<R>.None;
+        }
+
         public Result<T, E> OkOr<E>(E error) where E : notnull
         {
             return this.tag switch
@@ -129,13 +210,6 @@ namespace Rustify.Monads
             };
         }
 
-        /// <summary>
-        /// Transforms the Option into a Result, Some(v) becomes Ok(v), None becomes Err(err) using the provided function.
-        /// </summary>
-        /// <typeparam name="E"></typeparam>
-        /// <param name="error"></param>
-        /// <returns></returns>
-        /// <exception cref="InvalidOperationException"></exception>
         public Result<T, E> OkOrElse<E>(Func<E> error) where E : notnull
         {
             return this.tag switch
@@ -165,9 +239,39 @@ namespace Rustify.Monads
             return Option<T>.None;
         }
 
+        public Option<T> Inspect(Action<T> action)
+        {
+            if (this.tag != 0)
+            {
+                action(this.value);
+            }
+            return this;
+        }
+
+        public static Option<T> Flatten(Option<Option<T>> option)
+        {
+            if (option.IsSome())
+            {
+                return option.Unwrap();
+            }
+            return Option<T>.None;
+        }
+
+        public IEnumerator<T> GetEnumerator()
+        {
+            if (this.tag != 0)
+            {
+                yield return this.value;
+            }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
         public static bool operator ==(Option<T> left, Option<T> right)
         {
-            return left.tag == right.tag && left.value.Equals(right.value);
+            if (left.tag != right.tag) return false;
+            if (left.tag == 0) return true;
+            return left.value.Equals(right.value);
         }
 
         public static bool operator !=(Option<T> left, Option<T> right)
@@ -183,6 +287,11 @@ namespace Rustify.Monads
         public override int GetHashCode()
         {
             return HashCode.Combine(this.tag, this.value);
+        }
+
+        public override string ToString()
+        {
+            return this.tag != 0 ? $"Some({this.value})" : "None";
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using Rustify.Monads;
+using Rustify.Monads;
 using System;
 
 namespace Rustify.Tests;
@@ -339,5 +339,336 @@ public sealed class OptionTests // Class name changed for clarity
         var option1 = Option.None<int>();
         var option2 = Option.None<int>();
         Assert.AreEqual(option1.GetHashCode(), option2.GetHashCode());
+    }
+
+    [TestMethod]
+    public void Expect_ReturnsValue_WhenSome()
+    {
+        var option = Option.Some(42);
+        Assert.AreEqual(42, option.Expect("Should have a value"));
+    }
+
+    [TestMethod]
+    [ExpectedException(typeof(InvalidOperationException))]
+    public void Expect_ThrowsWithMessage_WhenNone()
+    {
+        var option = Option.None<int>();
+        option.Expect("Custom error message");
+    }
+
+    [TestMethod]
+    public void Expect_ThrowsCorrectMessage_WhenNone()
+    {
+        var option = Option.None<int>();
+        try
+        {
+            option.Expect("Custom error message");
+            Assert.Fail("Should have thrown");
+        }
+        catch (InvalidOperationException ex)
+        {
+            Assert.AreEqual("Custom error message", ex.Message);
+        }
+    }
+
+    [TestMethod]
+    public void UnwrapOrDefault_ReturnsValue_WhenSome()
+    {
+        var option = Option.Some(42);
+        Assert.AreEqual(42, option.UnwrapOrDefault());
+    }
+
+    [TestMethod]
+    public void UnwrapOrDefault_ReturnsDefault_WhenNone()
+    {
+        var option = Option.None<int>();
+        Assert.AreEqual(0, option.UnwrapOrDefault());
+    }
+
+    [TestMethod]
+    public void UnwrapOrDefault_ReturnsNull_WhenNoneForReferenceType()
+    {
+        var option = Option.None<string>();
+        Assert.IsNull(option.UnwrapOrDefault());
+    }
+
+    [TestMethod]
+    public void IsNoneOr_ReturnsTrue_WhenNone()
+    {
+        var option = Option.None<int>();
+        Assert.IsTrue(option.IsNoneOr(x => x > 100));
+    }
+
+    [TestMethod]
+    public void IsNoneOr_ReturnsTrue_WhenSomeAndPredicateTrue()
+    {
+        var option = Option.Some(10);
+        Assert.IsTrue(option.IsNoneOr(x => x > 5));
+    }
+
+    [TestMethod]
+    public void IsNoneOr_ReturnsFalse_WhenSomeAndPredicateFalse()
+    {
+        var option = Option.Some(3);
+        Assert.IsFalse(option.IsNoneOr(x => x > 5));
+    }
+
+    [TestMethod]
+    public void MapOr_ReturnsMappedValue_WhenSome()
+    {
+        var option = Option.Some(5);
+        var result = option.MapOr("default", x => $"Value: {x}");
+        Assert.AreEqual("Value: 5", result);
+    }
+
+    [TestMethod]
+    public void MapOr_ReturnsDefault_WhenNone()
+    {
+        var option = Option.None<int>();
+        var result = option.MapOr("default", x => $"Value: {x}");
+        Assert.AreEqual("default", result);
+    }
+
+    [TestMethod]
+    public void MapOrElse_ReturnsMappedValue_WhenSome()
+    {
+        var option = Option.Some(5);
+        var result = option.MapOrElse(() => "computed default", x => $"Value: {x}");
+        Assert.AreEqual("Value: 5", result);
+    }
+
+    [TestMethod]
+    public void MapOrElse_ReturnsComputedDefault_WhenNone()
+    {
+        var option = Option.None<int>();
+        var result = option.MapOrElse(() => "computed default", x => $"Value: {x}");
+        Assert.AreEqual("computed default", result);
+    }
+
+    [TestMethod]
+    public void Or_ReturnsSelf_WhenSome()
+    {
+        var option = Option.Some(1);
+        var other = Option.Some(2);
+        var result = option.Or(other);
+        Assert.AreEqual(1, result.Unwrap());
+    }
+
+    [TestMethod]
+    public void Or_ReturnsOther_WhenNone()
+    {
+        var option = Option.None<int>();
+        var other = Option.Some(2);
+        var result = option.Or(other);
+        Assert.AreEqual(2, result.Unwrap());
+    }
+
+    [TestMethod]
+    public void Or_ReturnsNone_WhenBothNone()
+    {
+        var option = Option.None<int>();
+        var other = Option.None<int>();
+        var result = option.Or(other);
+        Assert.IsTrue(result.IsNone());
+    }
+
+    [TestMethod]
+    public void Xor_ReturnsSelf_WhenSomeAndOtherNone()
+    {
+        var option = Option.Some(1);
+        var other = Option.None<int>();
+        var result = option.Xor(other);
+        Assert.IsTrue(result.IsSome());
+        Assert.AreEqual(1, result.Unwrap());
+    }
+
+    [TestMethod]
+    public void Xor_ReturnsOther_WhenNoneAndOtherSome()
+    {
+        var option = Option.None<int>();
+        var other = Option.Some(2);
+        var result = option.Xor(other);
+        Assert.IsTrue(result.IsSome());
+        Assert.AreEqual(2, result.Unwrap());
+    }
+
+    [TestMethod]
+    public void Xor_ReturnsNone_WhenBothSome()
+    {
+        var option = Option.Some(1);
+        var other = Option.Some(2);
+        var result = option.Xor(other);
+        Assert.IsTrue(result.IsNone());
+    }
+
+    [TestMethod]
+    public void Xor_ReturnsNone_WhenBothNone()
+    {
+        var option = Option.None<int>();
+        var other = Option.None<int>();
+        var result = option.Xor(other);
+        Assert.IsTrue(result.IsNone());
+    }
+
+    [TestMethod]
+    public void Zip_ReturnsTuple_WhenBothSome()
+    {
+        var option1 = Option.Some(1);
+        var option2 = Option.Some("one");
+        var result = option1.Zip(option2);
+        Assert.IsTrue(result.IsSome());
+        var tuple = result.Unwrap();
+        Assert.AreEqual(1, tuple.Item1);
+        Assert.AreEqual("one", tuple.Item2);
+    }
+
+    [TestMethod]
+    public void Zip_ReturnsNone_WhenFirstNone()
+    {
+        var option1 = Option.None<int>();
+        var option2 = Option.Some("one");
+        var result = option1.Zip(option2);
+        Assert.IsTrue(result.IsNone());
+    }
+
+    [TestMethod]
+    public void Zip_ReturnsNone_WhenSecondNone()
+    {
+        var option1 = Option.Some(1);
+        var option2 = Option.None<string>();
+        var result = option1.Zip(option2);
+        Assert.IsTrue(result.IsNone());
+    }
+
+    [TestMethod]
+    public void ZipWith_ReturnsCombinedValue_WhenBothSome()
+    {
+        var option1 = Option.Some(2);
+        var option2 = Option.Some(3);
+        var result = option1.ZipWith(option2, (a, b) => a * b);
+        Assert.IsTrue(result.IsSome());
+        Assert.AreEqual(6, result.Unwrap());
+    }
+
+    [TestMethod]
+    public void ZipWith_ReturnsNone_WhenFirstNone()
+    {
+        var option1 = Option.None<int>();
+        var option2 = Option.Some(3);
+        var result = option1.ZipWith(option2, (a, b) => a * b);
+        Assert.IsTrue(result.IsNone());
+    }
+
+    [TestMethod]
+    public void ZipWith_ReturnsNone_WhenSecondNone()
+    {
+        var option1 = Option.Some(2);
+        var option2 = Option.None<int>();
+        var result = option1.ZipWith(option2, (a, b) => a * b);
+        Assert.IsTrue(result.IsNone());
+    }
+
+    [TestMethod]
+    public void Inspect_ExecutesAction_WhenSome()
+    {
+        var option = Option.Some(42);
+        var inspected = 0;
+        var result = option.Inspect(x => inspected = x);
+        Assert.AreEqual(42, inspected);
+        Assert.IsTrue(result.IsSome());
+    }
+
+    [TestMethod]
+    public void Inspect_DoesNotExecuteAction_WhenNone()
+    {
+        var option = Option.None<int>();
+        var executed = false;
+        var result = option.Inspect(x => executed = true);
+        Assert.IsFalse(executed);
+        Assert.IsTrue(result.IsNone());
+    }
+
+    [TestMethod]
+    public void Flatten_ReturnsInnerOption_WhenOuterIsSome()
+    {
+        var inner = Option.Some(42);
+        var outer = Option.Some(inner);
+        var flattened = Option<int>.Flatten(outer);
+        Assert.IsTrue(flattened.IsSome());
+        Assert.AreEqual(42, flattened.Unwrap());
+    }
+
+    [TestMethod]
+    public void Flatten_ReturnsNone_WhenOuterIsNone()
+    {
+        var outer = Option.None<Option<int>>();
+        var flattened = Option<int>.Flatten(outer);
+        Assert.IsTrue(flattened.IsNone());
+    }
+
+    [TestMethod]
+    public void Flatten_ReturnsNone_WhenInnerIsNone()
+    {
+        var inner = Option.None<int>();
+        var outer = Option.Some(inner);
+        var flattened = Option<int>.Flatten(outer);
+        Assert.IsTrue(flattened.IsNone());
+    }
+
+    [TestMethod]
+    public void ToString_ReturnsSomeWithValue_WhenSome()
+    {
+        var option = Option.Some(42);
+        Assert.AreEqual("Some(42)", option.ToString());
+    }
+
+    [TestMethod]
+    public void ToString_ReturnsNone_WhenNone()
+    {
+        var option = Option.None<int>();
+        Assert.AreEqual("None", option.ToString());
+    }
+
+    [TestMethod]
+    public void IEnumerable_YieldsValue_WhenSome()
+    {
+        var option = Option.Some(42);
+        var count = 0;
+        var sum = 0;
+        foreach (var value in option)
+        {
+            count++;
+            sum += value;
+        }
+        Assert.AreEqual(1, count);
+        Assert.AreEqual(42, sum);
+    }
+
+    [TestMethod]
+    public void IEnumerable_YieldsNothing_WhenNone()
+    {
+        var option = Option.None<int>();
+        var count = 0;
+        foreach (var value in option)
+        {
+            count++;
+        }
+        Assert.AreEqual(0, count);
+    }
+
+    [TestMethod]
+    public void IEnumerable_WorksWithLinq_WhenSome()
+    {
+        var option = Option.Some(10);
+        var doubled = option.Select(x => x * 2).FirstOrDefault();
+        Assert.AreEqual(20, doubled);
+    }
+
+    [TestMethod]
+    public void IEnumerable_WorksWithLinq_WhenNone()
+    {
+        var option = Option.None<int>();
+        var result = option.Select(x => x * 2).FirstOrDefault();
+        Assert.AreEqual(0, result);
     }
 }

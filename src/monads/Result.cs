@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace Rustify.Monads
 {
@@ -19,7 +21,7 @@ namespace Rustify.Monads
         }
     }
 
-    public readonly struct Result<T, E>
+    public readonly struct Result<T, E> : IEnumerable<T>
         where T : notnull
         where E : notnull
     {
@@ -58,12 +60,51 @@ namespace Rustify.Monads
             }
         }
 
-        /// <throw>InvalidOperationException</throw>
         public T Unwrap()
         {
             if (this.tag == 0)
             {
                 throw new InvalidOperationException("Cannot unwrap an Error result");
+            }
+
+            return this.value;
+        }
+
+        public T Expect(string message)
+        {
+            if (this.tag == 0)
+            {
+                throw new InvalidOperationException(message);
+            }
+
+            return this.value;
+        }
+
+        public T UnwrapOr(T fallback)
+        {
+            if (this.tag == 0)
+            {
+                return fallback;
+            }
+
+            return this.value;
+        }
+
+        public T UnwrapOrElse(Func<E, T> fallback)
+        {
+            if (this.tag == 0)
+            {
+                return fallback(this.error);
+            }
+
+            return this.value;
+        }
+
+        public T? UnwrapOrDefault()
+        {
+            if (this.tag == 0)
+            {
+                return default;
             }
 
             return this.value;
@@ -79,6 +120,36 @@ namespace Rustify.Monads
             return this.error;
         }
 
+        public E ExpectErr(string message)
+        {
+            if (this.tag != 0)
+            {
+                throw new InvalidOperationException(message);
+            }
+
+            return this.error;
+        }
+
+        public bool IsOkAnd(Func<T, bool> f)
+        {
+            if (this.tag != 0)
+            {
+                return f(this.value);
+            }
+
+            return false;
+        }
+
+        public bool IsErrAnd(Func<E, bool> f)
+        {
+            if (this.tag == 0)
+            {
+                return f(this.error);
+            }
+
+            return false;
+        }
+
         public Result<T, E> AndThen(Func<T, Result<T, E>> f)
         {
             if (this.tag != 0)
@@ -89,12 +160,26 @@ namespace Rustify.Monads
             return this;
         }
 
-        /// <summary>
-        /// Calls `op` if the result is [`Err`], otherwise returns the [`Ok`] value of `self`.
-        /// </summary>
-        /// <typeparam name="F"></typeparam>
-        /// <param name="op"></param>
-        /// <returns></returns>
+        public Result<U, E> And<U>(Result<U, E> other) where U : notnull
+        {
+            if (this.tag != 0)
+            {
+                return other;
+            }
+
+            return Result<U, E>.Err(this.error);
+        }
+
+        public Result<T, E> Or(Result<T, E> other)
+        {
+            if (this.tag != 0)
+            {
+                return this;
+            }
+
+            return other;
+        }
+
         public Result<T, F> OrElse<F>(Func<E, Result<T, F>> op)
             where F : notnull
         {
@@ -164,14 +249,32 @@ namespace Rustify.Monads
             return errFn(this.error);
         }
 
+        public Result<T, E> Inspect(Action<T> action)
+        {
+            if (this.tag != 0)
+            {
+                action(this.value);
+            }
+            return this;
+        }
+
+        public Result<T, E> InspectErr(Action<E> action)
+        {
+            if (this.tag == 0)
+            {
+                action(this.error);
+            }
+            return this;
+        }
+
         public static Result<U, E> Flatten<U>(Result<Result<U, E>, E> result)
             where U : notnull
         {
             if (result.IsOk)
             {
-                return result.Unwrap(); // Returns the inner Result<U, E>
+                return result.Unwrap();
             }
-            return Result<U, E>.Err(result.UnwrapErr()); // Returns the outer Err
+            return Result<U, E>.Err(result.UnwrapErr());
         }
 
         public static Option<Result<U, E>> Transpose<U>(Result<Option<U>, E> result)
@@ -193,6 +296,45 @@ namespace Rustify.Monads
             {
                 return Option.Some(Result<U, E>.Err(result.UnwrapErr()));
             }
+        }
+
+        public IEnumerator<T> GetEnumerator()
+        {
+            if (this.tag != 0)
+            {
+                yield return this.value;
+            }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        public static bool operator ==(Result<T, E> left, Result<T, E> right)
+        {
+            if (left.tag != right.tag) return false;
+            if (left.tag == 0) return left.error.Equals(right.error);
+            return left.value.Equals(right.value);
+        }
+
+        public static bool operator !=(Result<T, E> left, Result<T, E> right)
+        {
+            return !(left == right);
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return obj is Result<T, E> result && this == result;
+        }
+
+        public override int GetHashCode()
+        {
+            return this.tag != 0
+                ? HashCode.Combine(this.tag, this.value)
+                : HashCode.Combine(this.tag, this.error);
+        }
+
+        public override string ToString()
+        {
+            return this.tag != 0 ? $"Ok({this.value})" : $"Err({this.error})";
         }
     }
 }

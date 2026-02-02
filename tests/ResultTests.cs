@@ -332,4 +332,370 @@ public sealed class ResultTests
         Assert.IsTrue(innerResult.IsErr);
         Assert.AreEqual(errorValue, innerResult.UnwrapErr());
     }
+
+    [TestMethod]
+    public void Expect_ReturnsValue_WhenOk()
+    {
+        var result = Result.Ok<int, string>(42);
+        Assert.AreEqual(42, result.Expect("Should have value"));
+    }
+
+    [TestMethod]
+    [ExpectedException(typeof(InvalidOperationException))]
+    public void Expect_ThrowsWithMessage_WhenErr()
+    {
+        var result = Result.Err<int, string>("error");
+        result.Expect("Custom error message");
+    }
+
+    [TestMethod]
+    public void Expect_ThrowsCorrectMessage_WhenErr()
+    {
+        var result = Result.Err<int, string>("error");
+        try
+        {
+            result.Expect("Custom error message");
+            Assert.Fail("Should have thrown");
+        }
+        catch (InvalidOperationException ex)
+        {
+            Assert.AreEqual("Custom error message", ex.Message);
+        }
+    }
+
+    [TestMethod]
+    public void ExpectErr_ReturnsError_WhenErr()
+    {
+        var result = Result.Err<int, string>("error");
+        Assert.AreEqual("error", result.ExpectErr("Should have error"));
+    }
+
+    [TestMethod]
+    [ExpectedException(typeof(InvalidOperationException))]
+    public void ExpectErr_ThrowsWithMessage_WhenOk()
+    {
+        var result = Result.Ok<int, string>(42);
+        result.ExpectErr("Custom error message");
+    }
+
+    [TestMethod]
+    public void UnwrapOr_ReturnsValue_WhenOk()
+    {
+        var result = Result.Ok<int, string>(42);
+        Assert.AreEqual(42, result.UnwrapOr(100));
+    }
+
+    [TestMethod]
+    public void UnwrapOr_ReturnsFallback_WhenErr()
+    {
+        var result = Result.Err<int, string>("error");
+        Assert.AreEqual(100, result.UnwrapOr(100));
+    }
+
+    [TestMethod]
+    public void UnwrapOrElse_ReturnsValue_WhenOk()
+    {
+        var result = Result.Ok<int, string>(42);
+        Assert.AreEqual(42, result.UnwrapOrElse(e => e.Length));
+    }
+
+    [TestMethod]
+    public void UnwrapOrElse_ReturnsFallbackFromError_WhenErr()
+    {
+        var result = Result.Err<int, string>("error");
+        Assert.AreEqual(5, result.UnwrapOrElse(e => e.Length));
+    }
+
+    [TestMethod]
+    public void UnwrapOrDefault_ReturnsValue_WhenOk()
+    {
+        var result = Result.Ok<int, string>(42);
+        Assert.AreEqual(42, result.UnwrapOrDefault());
+    }
+
+    [TestMethod]
+    public void UnwrapOrDefault_ReturnsDefault_WhenErr()
+    {
+        var result = Result.Err<int, string>("error");
+        Assert.AreEqual(0, result.UnwrapOrDefault());
+    }
+
+    [TestMethod]
+    public void UnwrapOrDefault_ReturnsNull_WhenErrForReferenceType()
+    {
+        var result = Result.Err<string, int>(42);
+        Assert.IsNull(result.UnwrapOrDefault());
+    }
+
+    [TestMethod]
+    public void IsOkAnd_ReturnsTrue_WhenOkAndPredicateTrue()
+    {
+        var result = Result.Ok<int, string>(10);
+        Assert.IsTrue(result.IsOkAnd(x => x > 5));
+    }
+
+    [TestMethod]
+    public void IsOkAnd_ReturnsFalse_WhenOkAndPredicateFalse()
+    {
+        var result = Result.Ok<int, string>(3);
+        Assert.IsFalse(result.IsOkAnd(x => x > 5));
+    }
+
+    [TestMethod]
+    public void IsOkAnd_ReturnsFalse_WhenErr()
+    {
+        var result = Result.Err<int, string>("error");
+        Assert.IsFalse(result.IsOkAnd(x => x > 5));
+    }
+
+    [TestMethod]
+    public void IsErrAnd_ReturnsTrue_WhenErrAndPredicateTrue()
+    {
+        var result = Result.Err<int, string>("error");
+        Assert.IsTrue(result.IsErrAnd(e => e.Length > 3));
+    }
+
+    [TestMethod]
+    public void IsErrAnd_ReturnsFalse_WhenErrAndPredicateFalse()
+    {
+        var result = Result.Err<int, string>("err");
+        Assert.IsFalse(result.IsErrAnd(e => e.Length > 5));
+    }
+
+    [TestMethod]
+    public void IsErrAnd_ReturnsFalse_WhenOk()
+    {
+        var result = Result.Ok<int, string>(42);
+        Assert.IsFalse(result.IsErrAnd(e => e.Length > 0));
+    }
+
+    [TestMethod]
+    public void And_ReturnsOther_WhenOk()
+    {
+        var result1 = Result.Ok<int, string>(1);
+        var result2 = Result.Ok<string, string>("hello");
+        var combined = result1.And(result2);
+        Assert.IsTrue(combined.IsOk);
+        Assert.AreEqual("hello", combined.Unwrap());
+    }
+
+    [TestMethod]
+    public void And_ReturnsErr_WhenFirstIsErr()
+    {
+        var result1 = Result.Err<int, string>("error");
+        var result2 = Result.Ok<string, string>("hello");
+        var combined = result1.And(result2);
+        Assert.IsTrue(combined.IsErr);
+        Assert.AreEqual("error", combined.UnwrapErr());
+    }
+
+    [TestMethod]
+    public void And_ReturnsOtherErr_WhenOkAndOtherIsErr()
+    {
+        var result1 = Result.Ok<int, string>(1);
+        var result2 = Result.Err<string, string>("other_error");
+        var combined = result1.And(result2);
+        Assert.IsTrue(combined.IsErr);
+        Assert.AreEqual("other_error", combined.UnwrapErr());
+    }
+
+    [TestMethod]
+    public void Or_ReturnsSelf_WhenOk()
+    {
+        var result1 = Result.Ok<int, string>(1);
+        var result2 = Result.Ok<int, string>(2);
+        var combined = result1.Or(result2);
+        Assert.IsTrue(combined.IsOk);
+        Assert.AreEqual(1, combined.Unwrap());
+    }
+
+    [TestMethod]
+    public void Or_ReturnsOther_WhenErr()
+    {
+        var result1 = Result.Err<int, string>("error");
+        var result2 = Result.Ok<int, string>(2);
+        var combined = result1.Or(result2);
+        Assert.IsTrue(combined.IsOk);
+        Assert.AreEqual(2, combined.Unwrap());
+    }
+
+    [TestMethod]
+    public void Or_ReturnsOtherErr_WhenBothErr()
+    {
+        var result1 = Result.Err<int, string>("error1");
+        var result2 = Result.Err<int, string>("error2");
+        var combined = result1.Or(result2);
+        Assert.IsTrue(combined.IsErr);
+        Assert.AreEqual("error2", combined.UnwrapErr());
+    }
+
+    [TestMethod]
+    public void Inspect_ExecutesAction_WhenOk()
+    {
+        var result = Result.Ok<int, string>(42);
+        var inspected = 0;
+        var returned = result.Inspect(x => inspected = x);
+        Assert.AreEqual(42, inspected);
+        Assert.IsTrue(returned.IsOk);
+    }
+
+    [TestMethod]
+    public void Inspect_DoesNotExecuteAction_WhenErr()
+    {
+        var result = Result.Err<int, string>("error");
+        var executed = false;
+        var returned = result.Inspect(x => executed = true);
+        Assert.IsFalse(executed);
+        Assert.IsTrue(returned.IsErr);
+    }
+
+    [TestMethod]
+    public void InspectErr_ExecutesAction_WhenErr()
+    {
+        var result = Result.Err<int, string>("error");
+        var inspected = "";
+        var returned = result.InspectErr(e => inspected = e);
+        Assert.AreEqual("error", inspected);
+        Assert.IsTrue(returned.IsErr);
+    }
+
+    [TestMethod]
+    public void InspectErr_DoesNotExecuteAction_WhenOk()
+    {
+        var result = Result.Ok<int, string>(42);
+        var executed = false;
+        var returned = result.InspectErr(e => executed = true);
+        Assert.IsFalse(executed);
+        Assert.IsTrue(returned.IsOk);
+    }
+
+    [TestMethod]
+    public void ToString_ReturnsOkWithValue_WhenOk()
+    {
+        var result = Result.Ok<int, string>(42);
+        Assert.AreEqual("Ok(42)", result.ToString());
+    }
+
+    [TestMethod]
+    public void ToString_ReturnsErrWithError_WhenErr()
+    {
+        var result = Result.Err<int, string>("error");
+        Assert.AreEqual("Err(error)", result.ToString());
+    }
+
+    [TestMethod]
+    public void Equals_ReturnsTrue_ForTwoOksWithSameValue()
+    {
+        var result1 = Result.Ok<int, string>(42);
+        var result2 = Result.Ok<int, string>(42);
+        Assert.IsTrue(result1.Equals(result2));
+        Assert.IsTrue(result1 == result2);
+        Assert.IsFalse(result1 != result2);
+    }
+
+    [TestMethod]
+    public void Equals_ReturnsFalse_ForTwoOksWithDifferentValues()
+    {
+        var result1 = Result.Ok<int, string>(42);
+        var result2 = Result.Ok<int, string>(100);
+        Assert.IsFalse(result1.Equals(result2));
+        Assert.IsFalse(result1 == result2);
+        Assert.IsTrue(result1 != result2);
+    }
+
+    [TestMethod]
+    public void Equals_ReturnsTrue_ForTwoErrsWithSameError()
+    {
+        var result1 = Result.Err<int, string>("error");
+        var result2 = Result.Err<int, string>("error");
+        Assert.IsTrue(result1.Equals(result2));
+        Assert.IsTrue(result1 == result2);
+        Assert.IsFalse(result1 != result2);
+    }
+
+    [TestMethod]
+    public void Equals_ReturnsFalse_ForTwoErrsWithDifferentErrors()
+    {
+        var result1 = Result.Err<int, string>("error1");
+        var result2 = Result.Err<int, string>("error2");
+        Assert.IsFalse(result1.Equals(result2));
+        Assert.IsFalse(result1 == result2);
+        Assert.IsTrue(result1 != result2);
+    }
+
+    [TestMethod]
+    public void Equals_ReturnsFalse_ForOkAndErr()
+    {
+        var result1 = Result.Ok<int, string>(42);
+        var result2 = Result.Err<int, string>("error");
+        Assert.IsFalse(result1.Equals(result2));
+        Assert.IsFalse(result1 == result2);
+        Assert.IsTrue(result1 != result2);
+    }
+
+    [TestMethod]
+    public void Equals_ReturnsFalse_WhenComparedWithDifferentType()
+    {
+        var result = Result.Ok<int, string>(42);
+        Assert.IsFalse(result.Equals("not a result"));
+    }
+
+    [TestMethod]
+    public void GetHashCode_ReturnsSameForEqualOks()
+    {
+        var result1 = Result.Ok<int, string>(42);
+        var result2 = Result.Ok<int, string>(42);
+        Assert.AreEqual(result1.GetHashCode(), result2.GetHashCode());
+    }
+
+    [TestMethod]
+    public void GetHashCode_ReturnsSameForEqualErrs()
+    {
+        var result1 = Result.Err<int, string>("error");
+        var result2 = Result.Err<int, string>("error");
+        Assert.AreEqual(result1.GetHashCode(), result2.GetHashCode());
+    }
+
+    [TestMethod]
+    public void IEnumerable_YieldsValue_WhenOk()
+    {
+        var result = Result.Ok<int, string>(42);
+        var count = 0;
+        var sum = 0;
+        foreach (var value in result)
+        {
+            count++;
+            sum += value;
+        }
+        Assert.AreEqual(1, count);
+        Assert.AreEqual(42, sum);
+    }
+
+    [TestMethod]
+    public void IEnumerable_YieldsNothing_WhenErr()
+    {
+        var result = Result.Err<int, string>("error");
+        var count = 0;
+        foreach (var value in result)
+        {
+            count++;
+        }
+        Assert.AreEqual(0, count);
+    }
+
+    [TestMethod]
+    public void IEnumerable_WorksWithLinq_WhenOk()
+    {
+        var result = Result.Ok<int, string>(10);
+        var doubled = result.Select(x => x * 2).FirstOrDefault();
+        Assert.AreEqual(20, doubled);
+    }
+
+    [TestMethod]
+    public void IEnumerable_WorksWithLinq_WhenErr()
+    {
+        var result = Result.Err<int, string>("error");
+        var value = result.Select(x => x * 2).FirstOrDefault();
+        Assert.AreEqual(0, value);
+    }
 }

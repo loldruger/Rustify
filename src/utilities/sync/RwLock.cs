@@ -8,279 +8,208 @@ using Rustify.Utilities.Synchronizer;
 
 namespace Rustify.Utilities.Sync
 {
-    /// <summary>
-    /// Provides asynchronous read-write lock functionality around a value of type T.
-    /// Uses ReaderWriterLockSlim internally.
-    /// Note: Requires T to implement IClone<T> to safely provide snapshots of the value
-    /// during asynchronous operations, minimizing lock duration.
-    /// </summary>
-    public class RwLock<T> : IAsyncRw<T> where T : notnull, IClone<T>
+    public class RwLock<T> : IAsyncRw<T>, IDisposable where T : notnull, IClone<T>
     {
-        private readonly ReaderWriterLockSlim rwLock = new();
+        private readonly SemaphoreSlim semaphore = new(1, 1);
         private T value;
+        private bool disposed = false;
 
         public RwLock(T initialValue)
         {
-            // Ensure initial value is not null according to coding instructions
             if (initialValue == null)
             {
-                // This should ideally not happen if called correctly, but added for safety.
-                // Consider throwing or returning an initialization error if null is possible.
                 throw new ArgumentNullException(nameof(initialValue), "Initial value cannot be null.");
             }
             this.value = initialValue;
         }
 
-        /// <summary>
-        /// Synchronously gets a clone of the current value with a read lock.
-        /// </summary>
         public Result<T, ISynchronizerError> GetValue()
         {
+            if (this.disposed) return Result<T, ISynchronizerError>.Err(ISynchronizerError.Failed);
+
             try
             {
-                this.rwLock.EnterReadLock();
+                this.semaphore.Wait();
                 try
                 {
-                    // Return a clone to prevent external modification after lock release
                     return Result<T, ISynchronizerError>.Ok(this.value.Clone());
                 }
                 finally
                 {
-                    // Ensure the lock is held before trying to exit
-                    if (this.rwLock.IsReadLockHeld)
-                    {
-                        this.rwLock.ExitReadLock();
-                    }
+                    this.semaphore.Release();
                 }
             }
-            catch (Exception ex)
+            catch (ObjectDisposedException)
             {
-                Console.WriteLine($"RwLock.GetValue failed: {ex.Message}");
-                // Return a generic failure error
+                return Result<T, ISynchronizerError>.Err(ISynchronizerError.Failed);
+            }
+            catch (Exception)
+            {
                 return Result<T, ISynchronizerError>.Err(ISynchronizerError.Failed);
             }
         }
 
-        /// <summary>
-        /// Asynchronously gets a clone of the current value with a read lock.
-        /// Ensures lock acquisition and release happen on the same thread via Task.Run.
-        /// </summary>
-        public async Task<Result<T, ISynchronizerError>> GetValueAsync()
+        public async Task<Result<T, ISynchronizerError>> GetValueAsync(CancellationToken cancellationToken = default)
         {
-            try
-            {
-                // Perform lock acquisition, value cloning, and lock release within Task.Run
-                // to ensure thread affinity for ReaderWriterLockSlim.
-                T clonedValue = await Task.Run(() =>
-                {
-                    this.rwLock.EnterReadLock();
-                    try
-                    {
-                        // Clone the value while the lock is held
-                        return this.value.Clone();
-                    }
-                    finally
-                    {
-                        // Ensure the lock is released on the same thread it was acquired
-                        if (this.rwLock.IsReadLockHeld)
-                        {
-                            this.rwLock.ExitReadLock();
-                        }
-                    }
-                });
-                // Return the cloned value after the lock is released
-                return Result<T, ISynchronizerError>.Ok(clonedValue);
-            }
-            catch (LockRecursionException) // Catch specific lock recursion error
-            {
-                // Return a specific error for lock recursion
-                return Result<T, ISynchronizerError>.Err(ISynchronizerError.RecursionError);
-            }
-            catch (Exception ex) // Catch any other exceptions, including those from Task.Run
-            {
-                Console.WriteLine($"GetValueAsync failed: {ex}");
-                // Return a generic failure error
-                return Result<T, ISynchronizerError>.Err(ISynchronizerError.Failed);
-            }
-        }
+            if (this.disposed) return Result<T, ISynchronizerError>.Err(ISynchronizerError.Failed);
 
-        /// <summary>
-        /// Asynchronously updates the value using the provided function `f` with a write lock.
-        /// Ensures lock acquisition and release happen on the same thread via Task.Run.
-        /// Note: This version does not handle errors within the update function `f`.
-        /// Consider a version accepting Func<T, Task<Result<T, E>>> for more robust error handling.
-        /// </summary>
-        public async Task<Result<Unit, ISynchronizerError>> UpdateValueAsync(Func<T, T> f)
-        {
             try
             {
-                // Perform lock acquisition, value update, and lock release within Task.Run.
-                await Task.Run(() =>
-                {
-                    this.rwLock.EnterWriteLock();
-                    try
-                    {
-                        // Apply the update function to the value
-                        this.value = f(this.value);
-                    }
-                    finally
-                    {
-                        // Ensure the lock is released on the same thread
-                        if (this.rwLock.IsWriteLockHeld)
-                        {
-                            this.rwLock.ExitWriteLock();
-                        }
-                    }
-                });
-                // Return success if the operation completed without exceptions
-                return Result<Unit, ISynchronizerError>.Ok(Unit.New);
-            }
-            catch (LockRecursionException)
-            {
-                return Result<Unit, ISynchronizerError>.Err(ISynchronizerError.RecursionError);
-            }
-            catch (Exception ex) // Catches exceptions from Task.Run or the update function f
-            {
-                Console.WriteLine($"UpdateValueAsync failed: {ex}");
-                return Result<Unit, ISynchronizerError>.Err(ISynchronizerError.Failed);
-            }
-        }
-
-        /// <summary>
-        /// Synchronously updates the value using the provided function `f` with a write lock.
-        /// Note: This version does not handle errors within the update function `f`.
-        /// </summary>
-        public Result<Unit, ISynchronizerError> UpdateValue(Func<T, T> f)
-        {
-            try
-            {
-                this.rwLock.EnterWriteLock();
+                await this.semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
                 try
                 {
-                    // Apply the update function
-                    this.value = f(this.value);
-                    // Return success
-                    return Result<Unit, ISynchronizerError>.Ok(Unit.New);
+                    return Result<T, ISynchronizerError>.Ok(this.value.Clone());
                 }
                 finally
                 {
-                    // Ensure the lock is held before trying to exit
-                    if (this.rwLock.IsWriteLockHeld)
-                    {
-                        this.rwLock.ExitWriteLock();
-                    }
+                    this.semaphore.Release();
                 }
             }
-            catch (LockRecursionException)
+            catch (OperationCanceledException)
             {
-                return Result<Unit, ISynchronizerError>.Err(ISynchronizerError.RecursionError);
+                return Result<T, ISynchronizerError>.Err(ISynchronizerError.Failed);
             }
-            catch (Exception ex) // Catches exceptions from the update function f
+            catch (ObjectDisposedException)
             {
-                Console.WriteLine($"UpdateValue failed: {ex}");
+                return Result<T, ISynchronizerError>.Err(ISynchronizerError.Failed);
+            }
+            catch (Exception)
+            {
+                return Result<T, ISynchronizerError>.Err(ISynchronizerError.Failed);
+            }
+        }
+
+        Task<Result<T, ISynchronizerError>> IAsync<T>.GetValueAsync()
+        {
+            return this.GetValueAsync(CancellationToken.None);
+        }
+
+        public Result<Unit, ISynchronizerError> UpdateValue(Func<T, T> f)
+        {
+            if (this.disposed) return Result<Unit, ISynchronizerError>.Err(ISynchronizerError.Failed);
+
+            try
+            {
+                this.semaphore.Wait();
+                try
+                {
+                    this.value = f(this.value);
+                    return Result<Unit, ISynchronizerError>.Ok(Unit.Value);
+                }
+                finally
+                {
+                    this.semaphore.Release();
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+                return Result<Unit, ISynchronizerError>.Err(ISynchronizerError.Failed);
+            }
+            catch (Exception)
+            {
                 return Result<Unit, ISynchronizerError>.Err(ISynchronizerError.Failed);
             }
         }
 
-        /// <summary>
-        /// Executes an asynchronous action with a write lock held.
-        /// Provides a clone of the value to the action to minimize lock duration.
-        /// </summary>
-        public async Task<Result<Result<U, E>, ISynchronizerError>> WithLockedAsync<U, E>(Func<T, Task<Result<U, E>>> action)
-            where U : notnull
-            where E : notnull
+        public async Task<Result<Unit, ISynchronizerError>> UpdateValueAsync(Func<T, T> f, CancellationToken cancellationToken = default)
         {
-            T localValueClone;
+            if (this.disposed) return Result<Unit, ISynchronizerError>.Err(ISynchronizerError.Failed);
+
             try
             {
-                // Acquire write lock, clone value, release lock within Task.Run
-                localValueClone = await Task.Run(() =>
+                await this.semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+                try
                 {
-                    this.rwLock.EnterWriteLock();
-                    try
-                    {
-                        return this.value.Clone();
-                    }
-                    finally
-                    {
-                        if (this.rwLock.IsWriteLockHeld)
-                        {
-                            this.rwLock.ExitWriteLock();
-                        }
-                    }
-                });
+                    this.value = f(this.value);
+                    return Result<Unit, ISynchronizerError>.Ok(Unit.Value);
+                }
+                finally
+                {
+                    this.semaphore.Release();
+                }
             }
-            catch (Exception ex) // Catches exceptions from Task.Run during lock/clone
+            catch (OperationCanceledException)
             {
-                Console.WriteLine($"WithLockedAsync failed during lock acquisition/clone: {ex}");
-                return Result<Result<U, E>, ISynchronizerError>.Err(ISynchronizerError.Failed);
+                return Result<Unit, ISynchronizerError>.Err(ISynchronizerError.Failed);
             }
-
-            // Execute the user action outside the lock with the cloned value
-            Result<U, E> actionResult;
-            try
+            catch (ObjectDisposedException)
             {
-                actionResult = await action(localValueClone);
+                return Result<Unit, ISynchronizerError>.Err(ISynchronizerError.Failed);
             }
-            catch (Exception ex) // Catches exceptions from the user-provided action
+            catch (Exception)
             {
-                Console.WriteLine($"WithLockedAsync action failed: {ex}");
-                // Wrap the action's potential failure in the outer Result structure
-                return Result<Result<U, E>, ISynchronizerError>.Err(ISynchronizerError.Failed);
+                return Result<Unit, ISynchronizerError>.Err(ISynchronizerError.Failed);
             }
-
-            // Wrap the successful action result
-            return Result<Result<U, E>, ISynchronizerError>.Ok(actionResult);
         }
 
-        /// <summary>
-        /// Executes an asynchronous action with a read lock held.
-        /// Provides a clone of the value to the action to minimize lock duration.
-        /// </summary>
-        public async Task<Result<Result<U, E>, ISynchronizerError>> WithReadLockedAsync<U, E>(Func<T, Task<Result<U, E>>> action)
+        Task<Result<Unit, ISynchronizerError>> IAsync<T>.UpdateValueAsync(Func<T, T> updateFunc)
+        {
+            return this.UpdateValueAsync(updateFunc, CancellationToken.None);
+        }
+
+        public async Task<Result<Result<U, E>, ISynchronizerError>> WithLockedAsync<U, E>(
+            Func<T, Task<Result<U, E>>> action,
+            CancellationToken cancellationToken = default)
             where U : notnull
             where E : notnull
         {
-            T localValueClone;
+            if (this.disposed) return Result<Result<U, E>, ISynchronizerError>.Err(ISynchronizerError.Failed);
+
             try
             {
-                // Acquire read lock, clone value, release lock within Task.Run
-                localValueClone = await Task.Run(() =>
+                await this.semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+                try
                 {
-                    this.rwLock.EnterReadLock();
-                    try
-                    {
-                        return this.value.Clone();
-                    }
-                    finally
-                    {
-                        if (this.rwLock.IsReadLockHeld)
-                        {
-                            this.rwLock.ExitReadLock();
-                        }
-                    }
-                });
+                    var clonedValue = this.value.Clone();
+                    var actionResult = await action(clonedValue).ConfigureAwait(false);
+                    return Result<Result<U, E>, ISynchronizerError>.Ok(actionResult);
+                }
+                finally
+                {
+                    this.semaphore.Release();
+                }
             }
-            catch (Exception ex) // Catches exceptions from Task.Run during lock/clone
+            catch (OperationCanceledException)
             {
-                Console.WriteLine($"WithReadLockedAsync failed during lock acquisition/clone: {ex}");
                 return Result<Result<U, E>, ISynchronizerError>.Err(ISynchronizerError.Failed);
             }
-
-            // Execute the user action outside the lock with the cloned value
-            Result<U, E> actionResult;
-            try
+            catch (ObjectDisposedException)
             {
-                actionResult = await action(localValueClone);
-            }
-            catch (Exception ex) // Catches exceptions from the user-provided action
-            {
-                Console.WriteLine($"WithReadLockedAsync action failed: {ex}");
                 return Result<Result<U, E>, ISynchronizerError>.Err(ISynchronizerError.Failed);
             }
+            catch (Exception)
+            {
+                return Result<Result<U, E>, ISynchronizerError>.Err(ISynchronizerError.Failed);
+            }
+        }
 
-            // Wrap the successful action result
-            return Result<Result<U, E>, ISynchronizerError>.Ok(actionResult);
+        Task<Result<Result<U, E>, ISynchronizerError>> IAsync<T>.WithLockedAsync<U, E>(Func<T, Task<Result<U, E>>> action)
+        {
+            return this.WithLockedAsync(action, CancellationToken.None);
+        }
+
+        public async Task<Result<Result<U, E>, ISynchronizerError>> WithReadLockedAsync<U, E>(
+            Func<T, Task<Result<U, E>>> action,
+            CancellationToken cancellationToken = default)
+            where U : notnull
+            where E : notnull
+        {
+            return await this.WithLockedAsync(action, cancellationToken).ConfigureAwait(false);
+        }
+
+        Task<Result<Result<U, E>, ISynchronizerError>> IAsyncRw<T>.WithReadLockedAsync<U, E>(Func<T, Task<Result<U, E>>> action)
+        {
+            return this.WithReadLockedAsync(action, CancellationToken.None);
+        }
+
+        public void Dispose()
+        {
+            if (this.disposed) return;
+
+            this.disposed = true;
+            this.semaphore.Dispose();
+
+            GC.SuppressFinalize(this);
         }
     }
 }
