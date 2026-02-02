@@ -2,9 +2,9 @@
 
   <PropertyGroup>
     <PackageId>Rustify</PackageId>
-    <Version>0.2.6</Version>
+    <Version>0.3.0</Version>
     <Authors>loldruger</Authors>
-    <Company>Ingeniumatics.ai</Company>
+    <Company>archetect.ai</Company>
     <Description>Rustify Your C# Project!</Description>
     <RepositoryUrl>https://github.com/loldruger/Rustify</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
