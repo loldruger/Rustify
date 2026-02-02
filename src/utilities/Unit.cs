@@ -2,10 +2,7 @@ namespace Rustify.Utilities
 {
     public readonly struct Unit
     {
-        public static readonly Unit Value = default;
-        
-        [System.Obsolete("Use Unit.Value instead")]
-        public static Unit New => Value;
+        public static Unit New => default;
 
         public override bool Equals(object? obj) => obj is Unit;
         public override int GetHashCode() => 0;

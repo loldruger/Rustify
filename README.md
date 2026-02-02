@@ -125,7 +125,7 @@ public class UnitExample
         if (succeed)
         {
             Console.WriteLine("Action performed successfully.");
-            return Result<Unit, string>.Ok(Unit.Value);
+            return Result<Unit, string>.Ok(Unit.New);
         }
         else
         {

@@ -189,7 +189,7 @@ namespace Rustify.Utilities.Sync
                 try
                 {
                     this.value = f(this.value);
-                    return Result<Unit, GenericMutexError>.Ok(Unit.Value);
+                    return Result<Unit, GenericMutexError>.Ok(Unit.New);
                 }
                 finally
                 {
@@ -218,7 +218,7 @@ namespace Rustify.Utilities.Sync
                 try
                 {
                     this.value = f(this.value);
-                    return Result<Unit, GenericMutexError>.Ok(Unit.Value);
+                    return Result<Unit, GenericMutexError>.Ok(Unit.New);
                 }
                 finally
                 {

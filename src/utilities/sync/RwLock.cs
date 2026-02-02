@@ -94,7 +94,7 @@ namespace Rustify.Utilities.Sync
                 try
                 {
                     this.value = f(this.value);
-                    return Result<Unit, ISynchronizerError>.Ok(Unit.Value);
+                    return Result<Unit, ISynchronizerError>.Ok(Unit.New);
                 }
                 finally
                 {
@@ -121,7 +121,7 @@ namespace Rustify.Utilities.Sync
                 try
                 {
                     this.value = f(this.value);
-                    return Result<Unit, ISynchronizerError>.Ok(Unit.Value);
+                    return Result<Unit, ISynchronizerError>.Ok(Unit.New);
                 }
                 finally
                 {
