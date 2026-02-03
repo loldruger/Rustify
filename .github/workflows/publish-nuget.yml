@@ -144,6 +144,9 @@ jobs:
       - name: Build for .NET 10.0
         run: dotnet build Rustify.csproj --configuration Release --no-restore -f net10.0
 
+      - name: Clean nupkgs folder
+        run: rm -rf ./nupkgs
+
       - name: Pack
         run: dotnet pack Rustify.csproj --configuration Release --no-build --output ./nupkgs
 
