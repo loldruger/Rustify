@@ -21,7 +21,7 @@ namespace Rustify.Monads
         }
     }
 
-    public readonly struct Option<T> : IEnumerable<T> where T : notnull
+    public readonly struct Option<T> : IEnumerable<T>, IEquatable<Option<T>>, IComparable<Option<T>> where T : notnull
     {
         private readonly byte tag;
         private readonly T value;
@@ -239,6 +239,12 @@ namespace Rustify.Monads
             return Option<T>.None;
         }
 
+        public bool Contains(T value)
+        {
+            if (this.tag == 0) return false;
+            return EqualityComparer<T>.Default.Equals(this.value, value);
+        }
+
         public Option<T> Inspect(Action<T> action)
         {
             if (this.tag != 0)
@@ -279,9 +285,28 @@ namespace Rustify.Monads
             return !(left == right);
         }
 
+        public bool Equals(Option<T> other)
+        {
+            return this == other;
+        }
+
         public override bool Equals(object? obj)
         {
             return obj is Option<T> option && this == option;
+        }
+
+        public int CompareTo(Option<T> other)
+        {
+            if (this.tag == 0 && other.tag == 0) return 0;
+            if (this.tag == 0) return -1;
+            if (other.tag == 0) return 1;
+
+            if (this.value is IComparable<T> comparable)
+            {
+                return comparable.CompareTo(other.value);
+            }
+
+            return Comparer<T>.Default.Compare(this.value, other.value);
         }
 
         public override int GetHashCode()

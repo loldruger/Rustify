@@ -3,7 +3,7 @@
     "disabled_skills": ["git-master"],
     "agents": {
         "atlas": {
-            "model": "google/gemini-3-pro-preview"
+            "model": "github-copilot/claude-opus-4.5"
         },
         "sisyphus": {
             "model": "github-copilot/claude-opus-4.5"
@@ -15,16 +15,16 @@
             "model": "github-copilot/claude-opus-4.5"
         },
         "explore": {
-            "model": "google/gemini-3-pro-preview"
+            "model": "github-copilot/claude-opus-4.5"
         },
         "librarian": {
-            "model": "google/gemini-3-pro-preview"
+            "model": "github-copilot/claude-opus-4.5"
         },
         "oracle": {
             "model": "github-copilot/claude-opus-4.5"
         },
         "sisyphus-junior": {
-            "model": "google/gemini-3-pro-preview"
+            "model": "github-copilot/claude-opus-4.5"
         }
     },
     "background_task": {

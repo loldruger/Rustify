@@ -14,7 +14,7 @@ namespace Rustify.Utilities.Sync
         private readonly SemaphoreSlim readerCountLock = new(1, 1);
         private int readerCount = 0;
         private T value;
-        private bool disposed = false;
+        private int disposed = 0;
 
         public RwLock(T initialValue)
         {
@@ -33,7 +33,15 @@ namespace Rustify.Utilities.Sync
                 this.readerCount++;
                 if (this.readerCount == 1)
                 {
-                    await this.writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+                    try
+                    {
+                        await this.writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        this.readerCount--;
+                        throw;
+                    }
                 }
             }
             finally
@@ -67,7 +75,15 @@ namespace Rustify.Utilities.Sync
                 this.readerCount+=1;
                 if (this.readerCount == 1)
                 {
-                    this.writeLock.Wait();
+                    try
+                    {
+                        this.writeLock.Wait();
+                    }
+                    catch
+                    {
+                        this.readerCount--;
+                        throw;
+                    }
                 }
             }
             finally
@@ -95,7 +111,7 @@ namespace Rustify.Utilities.Sync
 
         public Result<T, ISynchronizerError> GetValue()
         {
-            if (this.disposed) return Result<T, ISynchronizerError>.Err(ISynchronizerError.Failed);
+            if (this.disposed != 0) return Result<T, ISynchronizerError>.Err(ISynchronizerError.Failed);
 
             try
             {
@@ -121,7 +137,7 @@ namespace Rustify.Utilities.Sync
 
         public async Task<Result<T, ISynchronizerError>> GetValueAsync(CancellationToken cancellationToken = default)
         {
-            if (this.disposed) return Result<T, ISynchronizerError>.Err(ISynchronizerError.Failed);
+            if (this.disposed != 0) return Result<T, ISynchronizerError>.Err(ISynchronizerError.Failed);
 
             try
             {
@@ -156,7 +172,7 @@ namespace Rustify.Utilities.Sync
 
         public Result<Unit, ISynchronizerError> UpdateValue(Func<T, T> f)
         {
-            if (this.disposed) return Result<Unit, ISynchronizerError>.Err(ISynchronizerError.Failed);
+            if (this.disposed != 0) return Result<Unit, ISynchronizerError>.Err(ISynchronizerError.Failed);
 
             try
             {
@@ -183,7 +199,7 @@ namespace Rustify.Utilities.Sync
 
         public async Task<Result<Unit, ISynchronizerError>> UpdateValueAsync(Func<T, T> f, CancellationToken cancellationToken = default)
         {
-            if (this.disposed) return Result<Unit, ISynchronizerError>.Err(ISynchronizerError.Failed);
+            if (this.disposed != 0) return Result<Unit, ISynchronizerError>.Err(ISynchronizerError.Failed);
 
             try
             {
@@ -223,7 +239,7 @@ namespace Rustify.Utilities.Sync
             where U : notnull
             where E : notnull
         {
-            if (this.disposed) return Result<Result<U, E>, ISynchronizerError>.Err(ISynchronizerError.Failed);
+            if (this.disposed != 0) return Result<Result<U, E>, ISynchronizerError>.Err(ISynchronizerError.Failed);
 
             try
             {
@@ -263,7 +279,7 @@ namespace Rustify.Utilities.Sync
             where U : notnull
             where E : notnull
         {
-            if (this.disposed) return Result<Result<U, E>, ISynchronizerError>.Err(ISynchronizerError.Failed);
+            if (this.disposed != 0) return Result<Result<U, E>, ISynchronizerError>.Err(ISynchronizerError.Failed);
 
             try
             {
@@ -300,9 +316,8 @@ namespace Rustify.Utilities.Sync
 
         public void Dispose()
         {
-            if (this.disposed) return;
+            if (Interlocked.Exchange(ref this.disposed, 1) == 1) return;
 
-            this.disposed = true;
             this.writeLock.Dispose();
             this.readerCountLock.Dispose();
 

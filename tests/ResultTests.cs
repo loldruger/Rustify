@@ -694,4 +694,550 @@ public sealed class ResultTests
         var value = result.Select(x => x * 2).FirstOrDefault();
         Assert.AreEqual(0, value);
     }
+
+    [TestMethod]
+    public void CompareTo_ReturnsZero_ForTwoErrsWithSameError()
+    {
+        var result1 = Result.Err<int, string>("error");
+        var result2 = Result.Err<int, string>("error");
+        Assert.AreEqual(0, result1.CompareTo(result2));
+    }
+
+    [TestMethod]
+    public void CompareTo_ReturnsNegative_WhenErrComparedToOk()
+    {
+        var err = Result.Err<int, string>("error");
+        var ok = Result.Ok<int, string>(10);
+        Assert.IsTrue(err.CompareTo(ok) < 0);
+    }
+
+    [TestMethod]
+    public void CompareTo_ReturnsPositive_WhenOkComparedToErr()
+    {
+        var ok = Result.Ok<int, string>(10);
+        var err = Result.Err<int, string>("error");
+        Assert.IsTrue(ok.CompareTo(err) > 0);
+    }
+
+    [TestMethod]
+    public void CompareTo_ReturnsZero_ForTwoOksWithSameValue()
+    {
+        var result1 = Result.Ok<int, string>(42);
+        var result2 = Result.Ok<int, string>(42);
+        Assert.AreEqual(0, result1.CompareTo(result2));
+    }
+
+    [TestMethod]
+    public void CompareTo_ReturnsNegative_WhenSmallerOkValue()
+    {
+        var result1 = Result.Ok<int, string>(10);
+        var result2 = Result.Ok<int, string>(20);
+        Assert.IsTrue(result1.CompareTo(result2) < 0);
+    }
+
+    [TestMethod]
+    public void CompareTo_ReturnsPositive_WhenLargerOkValue()
+    {
+        var result1 = Result.Ok<int, string>(20);
+        var result2 = Result.Ok<int, string>(10);
+        Assert.IsTrue(result1.CompareTo(result2) > 0);
+    }
+
+    [TestMethod]
+    public void CompareTo_ComparesErrors_WhenBothErr()
+    {
+        var result1 = Result.Err<int, string>("aaa");
+        var result2 = Result.Err<int, string>("bbb");
+        Assert.IsTrue(result1.CompareTo(result2) < 0);
+    }
+
+    [TestMethod]
+    public void IEquatable_Equals_WorksCorrectly()
+    {
+        IEquatable<Result<int, string>> result1 = Result.Ok<int, string>(42);
+        var result2 = Result.Ok<int, string>(42);
+        Assert.IsTrue(result1.Equals(result2));
+    }
+
+    [TestMethod]
+    public void IComparable_CompareTo_WorksCorrectly()
+    {
+        IComparable<Result<int, string>> result1 = Result.Ok<int, string>(10);
+        var result2 = Result.Ok<int, string>(20);
+        Assert.IsTrue(result1.CompareTo(result2) < 0);
+    }
+
+    [TestMethod]
+    public void LinqSelect_TransformsValue_WhenOk()
+    {
+        var result = Result.Ok<int, string>(5);
+        var mapped = result.Select(x => x * 2);
+        Assert.IsTrue(mapped.IsOk);
+        Assert.AreEqual(10, mapped.Unwrap());
+    }
+
+    [TestMethod]
+    public void LinqSelect_ReturnsErr_WhenErr()
+    {
+        var result = Result.Err<int, string>("error");
+        var mapped = result.Select(x => x * 2);
+        Assert.IsTrue(mapped.IsErr);
+        Assert.AreEqual("error", mapped.UnwrapErr());
+    }
+
+    [TestMethod]
+    public void LinqSelectMany_ChainsResults_WhenBothOk()
+    {
+        var result = Result.Ok<int, string>(5);
+        var chained = result.SelectMany(x => Result.Ok<int, string>(x * 2));
+        Assert.IsTrue(chained.IsOk);
+        Assert.AreEqual(10, chained.Unwrap());
+    }
+
+    [TestMethod]
+    public void LinqSelectMany_ReturnsErr_WhenFirstErr()
+    {
+        var result = Result.Err<int, string>("error");
+        var chained = result.SelectMany(x => Result.Ok<int, string>(x * 2));
+        Assert.IsTrue(chained.IsErr);
+        Assert.AreEqual("error", chained.UnwrapErr());
+    }
+
+    [TestMethod]
+    public void LinqSelectMany_ReturnsErr_WhenSelectorReturnsErr()
+    {
+        var result = Result.Ok<int, string>(5);
+        var chained = result.SelectMany(x => Result.Err<int, string>("inner error"));
+        Assert.IsTrue(chained.IsErr);
+        Assert.AreEqual("inner error", chained.UnwrapErr());
+    }
+
+    [TestMethod]
+    public void LinqQuerySyntax_WorksWithResults()
+    {
+        var result1 = Result.Ok<int, string>(10);
+        var result2 = Result.Ok<int, string>(20);
+
+        var combined = from a in result1
+                       from b in result2
+                       select a + b;
+
+        Assert.IsTrue(combined.IsOk);
+        Assert.AreEqual(30, combined.Unwrap());
+    }
+
+    [TestMethod]
+    public void LinqQuerySyntax_ReturnsErr_WhenAnyIsErr()
+    {
+        var result1 = Result.Ok<int, string>(10);
+        var result2 = Result.Err<int, string>("error");
+
+        var combined = from a in result1
+                       from b in result2
+                       select a + b;
+
+        Assert.IsTrue(combined.IsErr);
+        Assert.AreEqual("error", combined.UnwrapErr());
+    }
+
+    [TestMethod]
+    public void Contains_ReturnsTrue_WhenOkWithMatchingValue()
+    {
+        var result = Result.Ok<int, string>(42);
+        Assert.IsTrue(result.Contains(42));
+    }
+
+    [TestMethod]
+    public void Contains_ReturnsFalse_WhenOkWithDifferentValue()
+    {
+        var result = Result.Ok<int, string>(42);
+        Assert.IsFalse(result.Contains(100));
+    }
+
+    [TestMethod]
+    public void Contains_ReturnsFalse_WhenErr()
+    {
+        var result = Result.Err<int, string>("error");
+        Assert.IsFalse(result.Contains(42));
+    }
+
+    [TestMethod]
+    public void ContainsErr_ReturnsTrue_WhenErrWithMatchingError()
+    {
+        var result = Result.Err<int, string>("error");
+        Assert.IsTrue(result.ContainsErr("error"));
+    }
+
+    [TestMethod]
+    public void ContainsErr_ReturnsFalse_WhenErrWithDifferentError()
+    {
+        var result = Result.Err<int, string>("error");
+        Assert.IsFalse(result.ContainsErr("other"));
+    }
+
+    [TestMethod]
+    public void ContainsErr_ReturnsFalse_WhenOk()
+    {
+        var result = Result.Ok<int, string>(42);
+        Assert.IsFalse(result.ContainsErr("error"));
+    }
+
+    [TestMethod]
+    public async Task MapAsync_TransformsValue_WhenOk()
+    {
+        var result = Result.Ok<int, string>(5);
+        var mapped = await result.MapAsync(async x =>
+        {
+            await Task.Delay(1);
+            return x * 2;
+        });
+        Assert.IsTrue(mapped.IsOk);
+        Assert.AreEqual(10, mapped.Unwrap());
+    }
+
+    [TestMethod]
+    public async Task MapAsync_PreservesError_WhenErr()
+    {
+        var result = Result.Err<int, string>("error");
+        var mapped = await result.MapAsync(async x =>
+        {
+            await Task.Delay(1);
+            return x * 2;
+        });
+        Assert.IsTrue(mapped.IsErr);
+        Assert.AreEqual("error", mapped.UnwrapErr());
+    }
+
+    [TestMethod]
+    public async Task AndThenAsync_ChainsResults_WhenBothOk()
+    {
+        var result = Result.Ok<int, string>(5);
+        var chained = await result.AndThenAsync(async x =>
+        {
+            await Task.Delay(1);
+            return Result.Ok<int, string>(x * 2);
+        });
+        Assert.IsTrue(chained.IsOk);
+        Assert.AreEqual(10, chained.Unwrap());
+    }
+
+    [TestMethod]
+    public async Task AndThenAsync_ReturnsErr_WhenSelectorReturnsErr()
+    {
+        var result = Result.Ok<int, string>(5);
+        var chained = await result.AndThenAsync(async x =>
+        {
+            await Task.Delay(1);
+            return Result.Err<int, string>("failed");
+        });
+        Assert.IsTrue(chained.IsErr);
+        Assert.AreEqual("failed", chained.UnwrapErr());
+    }
+
+    [TestMethod]
+    public async Task TaskMapAsync_TransformsValue_FromTask()
+    {
+        var resultTask = Task.FromResult(Result.Ok<int, string>(5));
+        var mapped = await resultTask.MapAsync(x => x * 2);
+        Assert.IsTrue(mapped.IsOk);
+        Assert.AreEqual(10, mapped.Unwrap());
+    }
+
+    [TestMethod]
+    public async Task UnwrapOrAsync_ReturnsValue_WhenOk()
+    {
+        var resultTask = Task.FromResult(Result.Ok<int, string>(42));
+        var value = await resultTask.UnwrapOrAsync(0);
+        Assert.AreEqual(42, value);
+    }
+
+    [TestMethod]
+    public async Task UnwrapOrAsync_ReturnsDefault_WhenErr()
+    {
+        var resultTask = Task.FromResult(Result.Err<int, string>("error"));
+        var value = await resultTask.UnwrapOrAsync(99);
+        Assert.AreEqual(99, value);
+    }
+
+    #region Additional Async Tests
+
+    [TestMethod]
+    public async Task MapAsync_DoesNotCallSelector_WhenErr()
+    {
+        var result = Result.Err<int, string>("error");
+        bool selectorCalled = false;
+
+        var mapped = await result.MapAsync(async x =>
+        {
+            selectorCalled = true;
+            await Task.Delay(1);
+            return x * 2;
+        });
+
+        Assert.IsFalse(selectorCalled);
+        Assert.IsTrue(mapped.IsErr);
+        Assert.AreEqual("error", mapped.UnwrapErr());
+    }
+
+    [TestMethod]
+    public async Task AndThenAsync_DoesNotCallSelector_WhenErr()
+    {
+        var result = Result.Err<int, string>("error");
+        bool selectorCalled = false;
+
+        var chained = await result.AndThenAsync(async x =>
+        {
+            selectorCalled = true;
+            await Task.Delay(1);
+            return Result.Ok<int, string>(x * 2);
+        });
+
+        Assert.IsFalse(selectorCalled);
+        Assert.IsTrue(chained.IsErr);
+        Assert.AreEqual("error", chained.UnwrapErr());
+    }
+
+    [TestMethod]
+    public async Task MapAsync_ChainedOperations()
+    {
+        var result = Result.Ok<int, string>(5);
+
+        var step1 = await result.MapAsync(async x =>
+        {
+            await Task.Delay(1);
+            return x * 2;
+        });
+
+        var step2 = await step1.MapAsync(async x =>
+        {
+            await Task.Delay(1);
+            return x + 10;
+        });
+
+        Assert.IsTrue(step2.IsOk);
+        Assert.AreEqual(20, step2.Unwrap());
+    }
+
+    [TestMethod]
+    public async Task MapAsync_ChainedOperations_PropagatesError()
+    {
+        var result = Result.Err<int, string>("initial error");
+
+        var step1 = await result.MapAsync(async x =>
+        {
+            await Task.Delay(1);
+            return x * 2;
+        });
+
+        var step2 = await step1.MapAsync(async x =>
+        {
+            await Task.Delay(1);
+            return x + 10;
+        });
+
+        Assert.IsTrue(step2.IsErr);
+        Assert.AreEqual("initial error", step2.UnwrapErr());
+    }
+
+    [TestMethod]
+    public async Task TaskMapAsync_ReturnsErr_WhenTaskContainsErr()
+    {
+        var resultTask = Task.FromResult(Result.Err<int, string>("error"));
+        var mapped = await resultTask.MapAsync(x => x * 2);
+        Assert.IsTrue(mapped.IsErr);
+        Assert.AreEqual("error", mapped.UnwrapErr());
+    }
+
+    [TestMethod]
+    public async Task TaskAndThenAsync_ChainsCorrectly()
+    {
+        var resultTask = Task.FromResult(Result.Ok<int, string>(5));
+        var chained = await resultTask.AndThenAsync(x => Result.Ok<int, string>(x * 2));
+        Assert.IsTrue(chained.IsOk);
+        Assert.AreEqual(10, chained.Unwrap());
+    }
+
+    [TestMethod]
+    public async Task TaskAndThenAsync_ReturnsErr_WhenTaskContainsErr()
+    {
+        var resultTask = Task.FromResult(Result.Err<int, string>("error"));
+        var chained = await resultTask.AndThenAsync(x => Result.Ok<int, string>(x * 2));
+        Assert.IsTrue(chained.IsErr);
+        Assert.AreEqual("error", chained.UnwrapErr());
+    }
+
+    [TestMethod]
+    public async Task TaskAndThenAsync_ReturnsErr_WhenSelectorReturnsErr()
+    {
+        var resultTask = Task.FromResult(Result.Ok<int, string>(5));
+        var chained = await resultTask.AndThenAsync(x => Result.Err<int, string>("selector error"));
+        Assert.IsTrue(chained.IsErr);
+        Assert.AreEqual("selector error", chained.UnwrapErr());
+    }
+
+    [TestMethod]
+    public async Task MapAsync_WithStringTransformation()
+    {
+        var result = Result.Ok<string, int>("hello");
+        var mapped = await result.MapAsync(async s =>
+        {
+            await Task.Delay(1);
+            return s.ToUpper();
+        });
+        Assert.IsTrue(mapped.IsOk);
+        Assert.AreEqual("HELLO", mapped.Unwrap());
+    }
+
+    [TestMethod]
+    public async Task MapAsync_WithTypeConversion()
+    {
+        var result = Result.Ok<int, string>(42);
+        var mapped = await result.MapAsync(async n =>
+        {
+            await Task.Delay(1);
+            return n.ToString();
+        });
+        Assert.IsTrue(mapped.IsOk);
+        Assert.AreEqual("42", mapped.Unwrap());
+    }
+
+    [TestMethod]
+    public async Task AndThenAsync_WithValidation()
+    {
+        var result = Result.Ok<int, string>(10);
+
+        var validated = await result.AndThenAsync(async x =>
+        {
+            await Task.Delay(1);
+            return x > 5
+                ? Result.Ok<int, string>(x)
+                : Result.Err<int, string>("Value too small");
+        });
+
+        Assert.IsTrue(validated.IsOk);
+        Assert.AreEqual(10, validated.Unwrap());
+    }
+
+    [TestMethod]
+    public async Task AndThenAsync_WithValidationFailure()
+    {
+        var result = Result.Ok<int, string>(3);
+
+        var validated = await result.AndThenAsync(async x =>
+        {
+            await Task.Delay(1);
+            return x > 5
+                ? Result.Ok<int, string>(x)
+                : Result.Err<int, string>("Value too small");
+        });
+
+        Assert.IsTrue(validated.IsErr);
+        Assert.AreEqual("Value too small", validated.UnwrapErr());
+    }
+
+    [TestMethod]
+    public async Task UnwrapOrAsync_WithReferenceType()
+    {
+        var resultTask = Task.FromResult(Result.Ok<string, int>("value"));
+        var value = await resultTask.UnwrapOrAsync("default");
+        Assert.AreEqual("value", value);
+    }
+
+    [TestMethod]
+    public async Task UnwrapOrAsync_WithReferenceType_WhenErr()
+    {
+        var resultTask = Task.FromResult(Result.Err<string, int>(404));
+        var value = await resultTask.UnwrapOrAsync("default");
+        Assert.AreEqual("default", value);
+    }
+
+    [TestMethod]
+    public async Task MapAsync_ParallelExecution()
+    {
+        var results = new[]
+        {
+            Result.Ok<int, string>(1),
+            Result.Ok<int, string>(2),
+            Result.Err<int, string>("error"),
+            Result.Ok<int, string>(4),
+            Result.Ok<int, string>(5)
+        };
+
+        var tasks = results.Select(r => r.MapAsync(async x =>
+        {
+            await Task.Delay(10);
+            return x * 10;
+        }));
+
+        var mappedResults = await Task.WhenAll(tasks);
+
+        Assert.AreEqual(10, mappedResults[0].UnwrapOr(0));
+        Assert.AreEqual(20, mappedResults[1].UnwrapOr(0));
+        Assert.AreEqual(0, mappedResults[2].UnwrapOr(0));
+        Assert.IsTrue(mappedResults[2].IsErr);
+        Assert.AreEqual(40, mappedResults[3].UnwrapOr(0));
+        Assert.AreEqual(50, mappedResults[4].UnwrapOr(0));
+    }
+
+    [TestMethod]
+    public async Task AndThenAsync_RealWorldScenario_MultiStepValidation()
+    {
+        async Task<Result<int, string>> ParseAsync(string input)
+        {
+            await Task.Delay(1);
+            if (int.TryParse(input, out var num))
+                return Result.Ok<int, string>(num);
+            return Result.Err<int, string>($"Failed to parse '{input}'");
+        }
+
+        async Task<Result<int, string>> ValidatePositiveAsync(int num)
+        {
+            await Task.Delay(1);
+            return num > 0
+                ? Result.Ok<int, string>(num)
+                : Result.Err<int, string>("Number must be positive");
+        }
+
+        async Task<Result<int, string>> ValidateRangeAsync(int num)
+        {
+            await Task.Delay(1);
+            return num <= 100
+                ? Result.Ok<int, string>(num)
+                : Result.Err<int, string>("Number must be <= 100");
+        }
+
+        var input = "42";
+        var result = await ParseAsync(input);
+        var step1 = await result.AndThenAsync(ValidatePositiveAsync);
+        var step2 = await step1.AndThenAsync(ValidateRangeAsync);
+
+        Assert.IsTrue(step2.IsOk);
+        Assert.AreEqual(42, step2.Unwrap());
+
+        input = "invalid";
+        result = await ParseAsync(input);
+        step1 = await result.AndThenAsync(ValidatePositiveAsync);
+        step2 = await step1.AndThenAsync(ValidateRangeAsync);
+
+        Assert.IsTrue(step2.IsErr);
+        Assert.AreEqual("Failed to parse 'invalid'", step2.UnwrapErr());
+
+        input = "-5";
+        result = await ParseAsync(input);
+        step1 = await result.AndThenAsync(ValidatePositiveAsync);
+        step2 = await step1.AndThenAsync(ValidateRangeAsync);
+
+        Assert.IsTrue(step2.IsErr);
+        Assert.AreEqual("Number must be positive", step2.UnwrapErr());
+
+        input = "150";
+        result = await ParseAsync(input);
+        step1 = await result.AndThenAsync(ValidatePositiveAsync);
+        step2 = await step1.AndThenAsync(ValidateRangeAsync);
+
+        Assert.IsTrue(step2.IsErr);
+        Assert.AreEqual("Number must be <= 100", step2.UnwrapErr());
+    }
+
+    #endregion
 }

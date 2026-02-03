@@ -21,7 +21,7 @@ namespace Rustify.Monads
         }
     }
 
-    public readonly struct Result<T, E> : IEnumerable<T>
+    public readonly struct Result<T, E> : IEnumerable<T>, IEquatable<Result<T, E>>, IComparable<Result<T, E>>
         where T : notnull
         where E : notnull
     {
@@ -267,6 +267,18 @@ namespace Rustify.Monads
             return this;
         }
 
+        public bool Contains(T value)
+        {
+            if (this.tag == 0) return false;
+            return EqualityComparer<T>.Default.Equals(this.value, value);
+        }
+
+        public bool ContainsErr(E error)
+        {
+            if (this.tag != 0) return false;
+            return EqualityComparer<E>.Default.Equals(this.error, error);
+        }
+
         public static Result<U, E> Flatten<U>(Result<Result<U, E>, E> result)
             where U : notnull
         {
@@ -320,9 +332,36 @@ namespace Rustify.Monads
             return !(left == right);
         }
 
+        public bool Equals(Result<T, E> other)
+        {
+            return this == other;
+        }
+
         public override bool Equals(object? obj)
         {
             return obj is Result<T, E> result && this == result;
+        }
+
+        public int CompareTo(Result<T, E> other)
+        {
+            if (this.tag == 0 && other.tag == 0)
+            {
+                if (this.error is IComparable<E> comparableErr)
+                {
+                    return comparableErr.CompareTo(other.error);
+                }
+                return Comparer<E>.Default.Compare(this.error, other.error);
+            }
+
+            if (this.tag == 0) return -1;
+            if (other.tag == 0) return 1;
+
+            if (this.value is IComparable<T> comparable)
+            {
+                return comparable.CompareTo(other.value);
+            }
+
+            return Comparer<T>.Default.Compare(this.value, other.value);
         }
 
         public override int GetHashCode()

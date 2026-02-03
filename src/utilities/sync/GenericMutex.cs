@@ -17,7 +17,7 @@ namespace Rustify.Utilities.Sync
     {
         private readonly SemaphoreSlim semaphore = new(1, 1);
         private T value;
-        private bool disposed = false;
+        private int disposed = 0;
 
         public GenericMutex(T value)
         {
@@ -26,7 +26,7 @@ namespace Rustify.Utilities.Sync
 
         public Result<T, GenericMutexError> TryGetValue()
         {
-            if (this.disposed) return Result<T, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+            if (Volatile.Read(ref this.disposed) != 0) return Result<T, GenericMutexError>.Err(GenericMutexError.MutexFailed);
 
             if (this.semaphore.Wait(0))
             {
@@ -45,7 +45,7 @@ namespace Rustify.Utilities.Sync
 
         public async Task<Result<T, GenericMutexError>> TryGetValueAsync(CancellationToken cancellationToken = default)
         {
-            if (this.disposed) return Result<T, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+            if (Volatile.Read(ref this.disposed) != 0) return Result<T, GenericMutexError>.Err(GenericMutexError.MutexFailed);
 
             try
             {
@@ -71,7 +71,7 @@ namespace Rustify.Utilities.Sync
 
         public Result<T, GenericMutexError> GetValue()
         {
-            if (this.disposed) return Result<T, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+            if (Volatile.Read(ref this.disposed) != 0) return Result<T, GenericMutexError>.Err(GenericMutexError.MutexFailed);
 
             try
             {
@@ -93,7 +93,7 @@ namespace Rustify.Utilities.Sync
 
         public async Task<Result<T, GenericMutexError>> GetValueAsync(CancellationToken cancellationToken = default)
         {
-            if (this.disposed) return Result<T, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+            if (Volatile.Read(ref this.disposed) != 0) return Result<T, GenericMutexError>.Err(GenericMutexError.MutexFailed);
 
             try
             {
@@ -121,7 +121,7 @@ namespace Rustify.Utilities.Sync
             where U : notnull
             where E : notnull
         {
-            if (this.disposed) return Result<Result<U, E>, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+            if (Volatile.Read(ref this.disposed) != 0) return Result<Result<U, E>, GenericMutexError>.Err(GenericMutexError.MutexFailed);
 
             try
             {
@@ -151,7 +151,7 @@ namespace Rustify.Utilities.Sync
             where U : notnull
             where E : notnull
         {
-            if (this.disposed) return Result<Result<U, E>, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+            if (Volatile.Read(ref this.disposed) != 0) return Result<Result<U, E>, GenericMutexError>.Err(GenericMutexError.MutexFailed);
 
             try
             {
@@ -181,7 +181,7 @@ namespace Rustify.Utilities.Sync
 
         public Result<Unit, GenericMutexError> UpdateValue(Func<T, T> f)
         {
-            if (this.disposed) return Result<Unit, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+            if (Volatile.Read(ref this.disposed) != 0) return Result<Unit, GenericMutexError>.Err(GenericMutexError.MutexFailed);
 
             try
             {
@@ -210,7 +210,7 @@ namespace Rustify.Utilities.Sync
             Func<T, T> f,
             CancellationToken cancellationToken = default)
         {
-            if (this.disposed) return Result<Unit, GenericMutexError>.Err(GenericMutexError.MutexFailed);
+            if (Volatile.Read(ref this.disposed) != 0) return Result<Unit, GenericMutexError>.Err(GenericMutexError.MutexFailed);
 
             try
             {
@@ -241,11 +241,9 @@ namespace Rustify.Utilities.Sync
 
         public void Dispose()
         {
-            if (this.disposed) return;
+            if (Interlocked.Exchange(ref this.disposed, 1) == 1) return;
 
-            this.disposed = true;
             this.semaphore.Dispose();
-
             GC.SuppressFinalize(this);
         }
     }
