@@ -661,20 +661,416 @@ public sealed class TaggedUnionTests
         Assert.AreEqual(now, result);
     }
 
-    #endregion
+     #endregion
 
-    #region Helper Types
+     #region Equality and ToString Tests
 
-    private class TestData
-    {
-        public int Value { get; set; }
-    }
+     [TestMethod]
+     public void TaggedUnion1_Equals_ReturnsTrueForSameValue()
+     {
+         var a = TaggedUnion<int>.__0(42);
+         var b = TaggedUnion<int>.__0(42);
+         Assert.IsTrue(a.Equals(b));
+         Assert.AreEqual(a, b);
+     }
 
-    private class ComplexData
-    {
-        public required string Name { get; set; }
-        public int Count { get; set; }
-    }
+     [TestMethod]
+     public void TaggedUnion1_Equals_ReturnsFalseForDifferentValue()
+     {
+         var a = TaggedUnion<int>.__0(42);
+         var b = TaggedUnion<int>.__0(100);
+         Assert.IsFalse(a.Equals(b));
+         Assert.AreNotEqual(a, b);
+     }
 
-    #endregion
+     [TestMethod]
+     public void TaggedUnion1_GetHashCode_SameForEqualValues()
+     {
+         var a = TaggedUnion<string>.__0("hello");
+         var b = TaggedUnion<string>.__0("hello");
+         Assert.AreEqual(a.GetHashCode(), b.GetHashCode());
+     }
+
+     [TestMethod]
+     public void TaggedUnion1_ToString_ReturnsExpectedFormat()
+     {
+         var union = TaggedUnion<int>.__0(42);
+         Assert.AreEqual("Case0(42)", union.ToString());
+     }
+
+     [TestMethod]
+     public void TaggedUnion2_Equals_ReturnsTrueForSameCase0()
+     {
+         var a = TaggedUnion<int, string>.__0(42);
+         var b = TaggedUnion<int, string>.__0(42);
+         Assert.IsTrue(a.Equals(b));
+         Assert.AreEqual(a, b);
+     }
+
+     [TestMethod]
+     public void TaggedUnion2_Equals_ReturnsTrueForSameCase1()
+     {
+         var a = TaggedUnion<int, string>.__1("hello");
+         var b = TaggedUnion<int, string>.__1("hello");
+         Assert.IsTrue(a.Equals(b));
+         Assert.AreEqual(a, b);
+     }
+
+     [TestMethod]
+     public void TaggedUnion2_Equals_ReturnsFalseForDifferentCases()
+     {
+         var a = TaggedUnion<int, int>.__0(42);
+         var b = TaggedUnion<int, int>.__1(42);
+         Assert.IsFalse(a.Equals(b));
+         Assert.AreNotEqual(a, b);
+     }
+
+     [TestMethod]
+     public void TaggedUnion2_GetHashCode_DifferentForDifferentCases()
+     {
+         var a = TaggedUnion<int, int>.__0(42);
+         var b = TaggedUnion<int, int>.__1(42);
+         Assert.AreNotEqual(a.GetHashCode(), b.GetHashCode());
+     }
+
+     [TestMethod]
+     public void TaggedUnion2_ToString_ReturnsCorrectFormat()
+     {
+         var case0 = TaggedUnion<int, string>.__0(42);
+         var case1 = TaggedUnion<int, string>.__1("hello");
+         Assert.AreEqual("Case0(42)", case0.ToString());
+         Assert.AreEqual("Case1(hello)", case1.ToString());
+     }
+
+     [TestMethod]
+     public void TaggedUnion3_Equals_ReturnsTrueForSameCase()
+     {
+         var a = TaggedUnion<int, string, bool>.__2(true);
+         var b = TaggedUnion<int, string, bool>.__2(true);
+         Assert.IsTrue(a.Equals(b));
+         Assert.AreEqual(a, b);
+     }
+
+     [TestMethod]
+     public void TaggedUnion3_Equals_ReturnsFalseForDifferentCases()
+     {
+         var a = TaggedUnion<int, int, int>.__0(1);
+         var b = TaggedUnion<int, int, int>.__1(1);
+         var c = TaggedUnion<int, int, int>.__2(1);
+         Assert.IsFalse(a.Equals(b));
+         Assert.IsFalse(b.Equals(c));
+         Assert.IsFalse(a.Equals(c));
+     }
+
+     [TestMethod]
+     public void TaggedUnion3_GetHashCode_SameForEqualValues()
+     {
+         var a = TaggedUnion<int, string, bool>.__1("test");
+         var b = TaggedUnion<int, string, bool>.__1("test");
+         Assert.AreEqual(a.GetHashCode(), b.GetHashCode());
+     }
+
+     [TestMethod]
+     public void TaggedUnion3_ToString_ReturnsCorrectFormat()
+     {
+         var case0 = TaggedUnion<int, string, bool>.__0(42);
+         var case1 = TaggedUnion<int, string, bool>.__1("hello");
+         var case2 = TaggedUnion<int, string, bool>.__2(true);
+         Assert.AreEqual("Case0(42)", case0.ToString());
+         Assert.AreEqual("Case1(hello)", case1.ToString());
+         Assert.AreEqual("Case2(True)", case2.ToString());
+     }
+
+     [TestMethod]
+     public void TaggedUnion_EqualsObject_ReturnsFalseForDifferentType()
+     {
+         var union = TaggedUnion<int>.__0(42);
+         Assert.IsFalse(union.Equals("not a union"));
+         Assert.IsFalse(union.Equals(new object()));
+         Assert.IsFalse(union.Equals(null));
+     }
+
+     [TestMethod]
+     public void TaggedUnion2_EqualsObject_ReturnsTrueForBoxedEqual()
+     {
+         var a = TaggedUnion<int, string>.__0(42);
+         object b = TaggedUnion<int, string>.__0(42);
+         Assert.IsTrue(a.Equals(b));
+     }
+
+     #endregion
+
+     #region TaggedUnion<A, B, C, D> Tests
+
+     [TestMethod]
+     public void TaggedUnion4_From0_StoresCorrectValue()
+     {
+         TaggedUnion<int, string, double, bool> union = 42;
+         Assert.IsTrue(union.Is0);
+         Assert.IsFalse(union.Is1);
+         Assert.IsFalse(union.Is2);
+         Assert.IsFalse(union.Is3);
+     }
+
+     [TestMethod]
+     public void TaggedUnion4_Match_ReturnsCorrectCase()
+     {
+         TaggedUnion<int, string, double, bool> union = "hello";
+         var result = union.Match(
+             case0: i => $"int:{i}",
+             case1: s => $"string:{s}",
+             case2: d => $"double:{d}",
+             case3: b => $"bool:{b}"
+         );
+         Assert.AreEqual("string:hello", result);
+     }
+
+     [TestMethod]
+     public void TaggedUnion4_Equality_Works()
+     {
+         var a = TaggedUnion<int, string, double, bool>.__0(42);
+         var b = TaggedUnion<int, string, double, bool>.__0(42);
+         var c = TaggedUnion<int, string, double, bool>.__0(99);
+
+         Assert.IsTrue(a == b);
+         Assert.IsTrue(a != c);
+     }
+
+     [TestMethod]
+     public void TaggedUnion4_AllCases_Work()
+     {
+         TaggedUnion<int, string, double, bool> u0 = 1;
+         TaggedUnion<int, string, double, bool> u1 = "s";
+         TaggedUnion<int, string, double, bool> u2 = 1.5;
+         TaggedUnion<int, string, double, bool> u3 = true;
+
+         Assert.IsTrue(u0.Is0);
+         Assert.IsTrue(u1.Is1);
+         Assert.IsTrue(u2.Is2);
+         Assert.IsTrue(u3.Is3);
+     }
+
+     [TestMethod]
+     public void TaggedUnion4_ActionMatch_ExecutesCorrectCase()
+     {
+         TaggedUnion<int, string, double, bool> union = 3.14;
+         int executed = -1;
+
+         union.Match(
+             case0: _ => executed = 0,
+             case1: _ => executed = 1,
+             case2: _ => executed = 2,
+             case3: _ => executed = 3
+         );
+
+         Assert.AreEqual(2, executed);
+     }
+
+     [TestMethod]
+     public void TaggedUnion4_GetHashCode_DifferentForDifferentCases()
+     {
+         var a = TaggedUnion<int, int, int, int>.__0(42);
+         var b = TaggedUnion<int, int, int, int>.__1(42);
+         var c = TaggedUnion<int, int, int, int>.__2(42);
+         var d = TaggedUnion<int, int, int, int>.__3(42);
+
+         Assert.AreNotEqual(a.GetHashCode(), b.GetHashCode());
+         Assert.AreNotEqual(b.GetHashCode(), c.GetHashCode());
+         Assert.AreNotEqual(c.GetHashCode(), d.GetHashCode());
+     }
+
+     [TestMethod]
+     public void TaggedUnion4_ToString_Works()
+     {
+         var case0 = TaggedUnion<int, string, double, bool>.__0(42);
+         var case3 = TaggedUnion<int, string, double, bool>.__3(true);
+
+         Assert.AreEqual("Case0(42)", case0.ToString());
+         Assert.AreEqual("Case3(True)", case3.ToString());
+     }
+
+     #endregion
+
+     #region TaggedUnion<A, B, C, D, E> Tests
+
+     [TestMethod]
+     public void TaggedUnion5_AllCases_Work()
+     {
+         TaggedUnion<int, string, double, bool, char> u0 = 1;
+         TaggedUnion<int, string, double, bool, char> u1 = "s";
+         TaggedUnion<int, string, double, bool, char> u2 = 1.5;
+         TaggedUnion<int, string, double, bool, char> u3 = true;
+         TaggedUnion<int, string, double, bool, char> u4 = 'x';
+
+         Assert.IsTrue(u0.Is0);
+         Assert.IsTrue(u1.Is1);
+         Assert.IsTrue(u2.Is2);
+         Assert.IsTrue(u3.Is3);
+         Assert.IsTrue(u4.Is4);
+     }
+
+     [TestMethod]
+     public void TaggedUnion5_Match_Works()
+     {
+         TaggedUnion<int, string, double, bool, char> union = 'z';
+         var result = union.Match(
+             case0: _ => 0,
+             case1: _ => 1,
+             case2: _ => 2,
+             case3: _ => 3,
+             case4: _ => 4
+         );
+         Assert.AreEqual(4, result);
+     }
+
+     [TestMethod]
+     public void TaggedUnion5_Equality_Works()
+     {
+         var a = TaggedUnion<int, string, double, bool, char>.__4('x');
+         var b = TaggedUnion<int, string, double, bool, char>.__4('x');
+         var c = TaggedUnion<int, string, double, bool, char>.__4('y');
+
+         Assert.IsTrue(a == b);
+         Assert.IsTrue(a != c);
+     }
+
+     [TestMethod]
+     public void TaggedUnion5_ActionMatch_Works()
+     {
+         TaggedUnion<int, string, double, bool, char> union = true;
+         int executed = -1;
+
+         union.Match(
+             case0: _ => executed = 0,
+             case1: _ => executed = 1,
+             case2: _ => executed = 2,
+             case3: _ => executed = 3,
+             case4: _ => executed = 4
+         );
+
+         Assert.AreEqual(3, executed);
+     }
+
+     [TestMethod]
+     public void TaggedUnion5_ToString_Works()
+     {
+         TaggedUnion<int, string, double, bool, char> union = 'X';
+         Assert.AreEqual("Case4(X)", union.ToString());
+     }
+
+     #endregion
+
+     #region TaggedUnion<A, B, C, D, E, F> Tests
+
+     [TestMethod]
+     public void TaggedUnion6_AllCases_Work()
+     {
+         TaggedUnion<int, string, double, bool, char, long> u0 = 1;
+         TaggedUnion<int, string, double, bool, char, long> u1 = "s";
+         TaggedUnion<int, string, double, bool, char, long> u2 = 1.5;
+         TaggedUnion<int, string, double, bool, char, long> u3 = true;
+         TaggedUnion<int, string, double, bool, char, long> u4 = 'x';
+         TaggedUnion<int, string, double, bool, char, long> u5 = 100L;
+
+         Assert.IsTrue(u0.Is0);
+         Assert.IsTrue(u1.Is1);
+         Assert.IsTrue(u2.Is2);
+         Assert.IsTrue(u3.Is3);
+         Assert.IsTrue(u4.Is4);
+         Assert.IsTrue(u5.Is5);
+     }
+
+     [TestMethod]
+     public void TaggedUnion6_Match_Works()
+     {
+         TaggedUnion<int, string, double, bool, char, long> union = 999L;
+         var result = union.Match(
+             case0: _ => "int",
+             case1: _ => "string",
+             case2: _ => "double",
+             case3: _ => "bool",
+             case4: _ => "char",
+             case5: _ => "long"
+         );
+         Assert.AreEqual("long", result);
+     }
+
+     [TestMethod]
+     public void TaggedUnion6_Equality_Works()
+     {
+         var a = TaggedUnion<int, string, double, bool, char, long>.__5(100L);
+         var b = TaggedUnion<int, string, double, bool, char, long>.__5(100L);
+         var c = TaggedUnion<int, string, double, bool, char, long>.__5(200L);
+
+         Assert.IsTrue(a == b);
+         Assert.IsTrue(a != c);
+     }
+
+     [TestMethod]
+     public void TaggedUnion6_ToString_Works()
+     {
+         TaggedUnion<int, string, double, bool, char, long> union = 'X';
+         Assert.AreEqual("Case4(X)", union.ToString());
+     }
+
+     [TestMethod]
+     public void TaggedUnion6_ActionMatch_Works()
+     {
+         TaggedUnion<int, string, double, bool, char, long> union = 500L;
+         int executed = -1;
+
+         union.Match(
+             case0: _ => executed = 0,
+             case1: _ => executed = 1,
+             case2: _ => executed = 2,
+             case3: _ => executed = 3,
+             case4: _ => executed = 4,
+             case5: _ => executed = 5
+         );
+
+         Assert.AreEqual(5, executed);
+     }
+
+     [TestMethod]
+     public void TaggedUnion6_SameTypes_WorksWithExplicitFactory()
+     {
+         var case0 = TaggedUnion<int, int, int, int, int, int>.__0(1);
+         var case1 = TaggedUnion<int, int, int, int, int, int>.__1(2);
+         var case2 = TaggedUnion<int, int, int, int, int, int>.__2(3);
+         var case3 = TaggedUnion<int, int, int, int, int, int>.__3(4);
+         var case4 = TaggedUnion<int, int, int, int, int, int>.__4(5);
+         var case5 = TaggedUnion<int, int, int, int, int, int>.__5(6);
+
+         Assert.IsTrue(case0.Is0);
+         Assert.IsTrue(case1.Is1);
+         Assert.IsTrue(case2.Is2);
+         Assert.IsTrue(case3.Is3);
+         Assert.IsTrue(case4.Is4);
+         Assert.IsTrue(case5.Is5);
+     }
+
+     [TestMethod]
+     public void TaggedUnion6_GetHashCode_SameForEqualValues()
+     {
+         var a = TaggedUnion<int, string, double, bool, char, long>.__3(true);
+         var b = TaggedUnion<int, string, double, bool, char, long>.__3(true);
+         Assert.AreEqual(a.GetHashCode(), b.GetHashCode());
+     }
+
+     #endregion
+
+     #region Helper Types
+
+     private class TestData
+     {
+         public int Value { get; set; }
+     }
+
+     private class ComplexData
+     {
+         public required string Name { get; set; }
+         public int Count { get; set; }
+     }
+
+     #endregion
 }

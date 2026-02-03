@@ -22,7 +22,7 @@ namespace Rustify.Monads
             where TResult : notnull
             where TError : notnull
         {
-            if (source.IsOk)
+            if (source.IsOk())
             {
                 return selector(source.Unwrap());
             }
@@ -38,11 +38,11 @@ namespace Rustify.Monads
             where TResult : notnull
             where TError : notnull
         {
-            if (source.IsOk)
+            if (source.IsOk())
             {
                 var sourceValue = source.Unwrap();
                 var collectionResult = collectionSelector(sourceValue);
-                if (collectionResult.IsOk)
+                if (collectionResult.IsOk())
                 {
                     return Result<TResult, TError>.Ok(
                         resultSelector(sourceValue, collectionResult.Unwrap()));
@@ -59,7 +59,7 @@ namespace Rustify.Monads
             where TResult : notnull
             where TError : notnull
         {
-            if (source.IsOk)
+            if (source.IsOk())
             {
                 var result = await selector(source.Unwrap()).ConfigureAwait(false);
                 return Result<TResult, TError>.Ok(result);
@@ -74,7 +74,7 @@ namespace Rustify.Monads
             where TResult : notnull
             where TError : notnull
         {
-            if (source.IsOk)
+            if (source.IsOk())
             {
                 return await selector(source.Unwrap()).ConfigureAwait(false);
             }
@@ -100,7 +100,7 @@ namespace Rustify.Monads
             where TError : notnull
         {
             var source = await sourceTask.ConfigureAwait(false);
-            if (source.IsOk)
+            if (source.IsOk())
             {
                 return selector(source.Unwrap());
             }

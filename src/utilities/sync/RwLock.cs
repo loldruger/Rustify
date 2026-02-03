@@ -109,16 +109,16 @@ namespace Rustify.Utilities.Sync
             }
         }
 
-        public Result<T, ISynchronizerError> GetValue()
+        public Result<T, SynchronizerError> GetValue()
         {
-            if (this.disposed != 0) return Result<T, ISynchronizerError>.Err(ISynchronizerError.Failed);
+            if (Volatile.Read(ref this.disposed) != 0) return Result<T, SynchronizerError>.Err(SynchronizerError.Disposed());
 
             try
             {
                 this.AcquireReadLock();
                 try
                 {
-                    return Result<T, ISynchronizerError>.Ok(this.value.Clone());
+                    return Result<T, SynchronizerError>.Ok(this.value.Clone());
                 }
                 finally
                 {
@@ -127,24 +127,24 @@ namespace Rustify.Utilities.Sync
             }
             catch (ObjectDisposedException)
             {
-                return Result<T, ISynchronizerError>.Err(ISynchronizerError.Failed);
+                return Result<T, SynchronizerError>.Err(SynchronizerError.Disposed());
             }
             catch (Exception)
             {
-                return Result<T, ISynchronizerError>.Err(ISynchronizerError.Failed);
+                return Result<T, SynchronizerError>.Err(SynchronizerError.Failed());
             }
         }
 
-        public async Task<Result<T, ISynchronizerError>> GetValueAsync(CancellationToken cancellationToken = default)
+        public async Task<Result<T, SynchronizerError>> GetValueAsync(CancellationToken cancellationToken = default)
         {
-            if (this.disposed != 0) return Result<T, ISynchronizerError>.Err(ISynchronizerError.Failed);
+            if (Volatile.Read(ref this.disposed) != 0) return Result<T, SynchronizerError>.Err(SynchronizerError.Disposed());
 
             try
             {
                 await this.AcquireReadLockAsync(cancellationToken).ConfigureAwait(false);
                 try
                 {
-                    return Result<T, ISynchronizerError>.Ok(this.value.Clone());
+                    return Result<T, SynchronizerError>.Ok(this.value.Clone());
                 }
                 finally
                 {
@@ -153,26 +153,26 @@ namespace Rustify.Utilities.Sync
             }
             catch (OperationCanceledException)
             {
-                return Result<T, ISynchronizerError>.Err(ISynchronizerError.Failed);
+                return Result<T, SynchronizerError>.Err(SynchronizerError.Cancelled());
             }
             catch (ObjectDisposedException)
             {
-                return Result<T, ISynchronizerError>.Err(ISynchronizerError.Failed);
+                return Result<T, SynchronizerError>.Err(SynchronizerError.Disposed());
             }
             catch (Exception)
             {
-                return Result<T, ISynchronizerError>.Err(ISynchronizerError.Failed);
+                return Result<T, SynchronizerError>.Err(SynchronizerError.Failed());
             }
         }
 
-        Task<Result<T, ISynchronizerError>> IAsync<T>.GetValueAsync()
+        Task<Result<T, SynchronizerError>> IAsync<T>.GetValueAsync()
         {
             return this.GetValueAsync(CancellationToken.None);
         }
 
-        public Result<Unit, ISynchronizerError> UpdateValue(Func<T, T> f)
+        public Result<Unit, SynchronizerError> UpdateValue(Func<T, T> f)
         {
-            if (this.disposed != 0) return Result<Unit, ISynchronizerError>.Err(ISynchronizerError.Failed);
+            if (Volatile.Read(ref this.disposed) != 0) return Result<Unit, SynchronizerError>.Err(SynchronizerError.Disposed());
 
             try
             {
@@ -180,7 +180,7 @@ namespace Rustify.Utilities.Sync
                 try
                 {
                     this.value = f(this.value);
-                    return Result<Unit, ISynchronizerError>.Ok(Unit.New);
+                    return Result<Unit, SynchronizerError>.Ok(Unit.New);
                 }
                 finally
                 {
@@ -189,17 +189,17 @@ namespace Rustify.Utilities.Sync
             }
             catch (ObjectDisposedException)
             {
-                return Result<Unit, ISynchronizerError>.Err(ISynchronizerError.Failed);
+                return Result<Unit, SynchronizerError>.Err(SynchronizerError.Disposed());
             }
             catch (Exception)
             {
-                return Result<Unit, ISynchronizerError>.Err(ISynchronizerError.Failed);
+                return Result<Unit, SynchronizerError>.Err(SynchronizerError.Failed());
             }
         }
 
-        public async Task<Result<Unit, ISynchronizerError>> UpdateValueAsync(Func<T, T> f, CancellationToken cancellationToken = default)
+        public async Task<Result<Unit, SynchronizerError>> UpdateValueAsync(Func<T, T> f, CancellationToken cancellationToken = default)
         {
-            if (this.disposed != 0) return Result<Unit, ISynchronizerError>.Err(ISynchronizerError.Failed);
+            if (Volatile.Read(ref this.disposed) != 0) return Result<Unit, SynchronizerError>.Err(SynchronizerError.Disposed());
 
             try
             {
@@ -207,7 +207,7 @@ namespace Rustify.Utilities.Sync
                 try
                 {
                     this.value = f(this.value);
-                    return Result<Unit, ISynchronizerError>.Ok(Unit.New);
+                    return Result<Unit, SynchronizerError>.Ok(Unit.New);
                 }
                 finally
                 {
@@ -216,30 +216,30 @@ namespace Rustify.Utilities.Sync
             }
             catch (OperationCanceledException)
             {
-                return Result<Unit, ISynchronizerError>.Err(ISynchronizerError.Failed);
+                return Result<Unit, SynchronizerError>.Err(SynchronizerError.Cancelled());
             }
             catch (ObjectDisposedException)
             {
-                return Result<Unit, ISynchronizerError>.Err(ISynchronizerError.Failed);
+                return Result<Unit, SynchronizerError>.Err(SynchronizerError.Disposed());
             }
             catch (Exception)
             {
-                return Result<Unit, ISynchronizerError>.Err(ISynchronizerError.Failed);
+                return Result<Unit, SynchronizerError>.Err(SynchronizerError.Failed());
             }
         }
 
-        Task<Result<Unit, ISynchronizerError>> IAsync<T>.UpdateValueAsync(Func<T, T> updateFunc)
+        Task<Result<Unit, SynchronizerError>> IAsync<T>.UpdateValueAsync(Func<T, T> updateFunc)
         {
             return this.UpdateValueAsync(updateFunc, CancellationToken.None);
         }
 
-        public async Task<Result<Result<U, E>, ISynchronizerError>> WithLockedAsync<U, E>(
+        public async Task<Result<Result<U, E>, SynchronizerError>> WithLockedAsync<U, E>(
             Func<T, Task<Result<U, E>>> action,
             CancellationToken cancellationToken = default)
             where U : notnull
             where E : notnull
         {
-            if (this.disposed != 0) return Result<Result<U, E>, ISynchronizerError>.Err(ISynchronizerError.Failed);
+            if (Volatile.Read(ref this.disposed) != 0) return Result<Result<U, E>, SynchronizerError>.Err(SynchronizerError.Disposed());
 
             try
             {
@@ -247,7 +247,7 @@ namespace Rustify.Utilities.Sync
                 try
                 {
                     var actionResult = await action(this.value).ConfigureAwait(false);
-                    return Result<Result<U, E>, ISynchronizerError>.Ok(actionResult);
+                    return Result<Result<U, E>, SynchronizerError>.Ok(actionResult);
                 }
                 finally
                 {
@@ -256,30 +256,30 @@ namespace Rustify.Utilities.Sync
             }
             catch (OperationCanceledException)
             {
-                return Result<Result<U, E>, ISynchronizerError>.Err(ISynchronizerError.Failed);
+                return Result<Result<U, E>, SynchronizerError>.Err(SynchronizerError.Cancelled());
             }
             catch (ObjectDisposedException)
             {
-                return Result<Result<U, E>, ISynchronizerError>.Err(ISynchronizerError.Failed);
+                return Result<Result<U, E>, SynchronizerError>.Err(SynchronizerError.Disposed());
             }
             catch (Exception)
             {
-                return Result<Result<U, E>, ISynchronizerError>.Err(ISynchronizerError.Failed);
+                return Result<Result<U, E>, SynchronizerError>.Err(SynchronizerError.Failed());
             }
         }
 
-        Task<Result<Result<U, E>, ISynchronizerError>> IAsync<T>.WithLockedAsync<U, E>(Func<T, Task<Result<U, E>>> action)
+        Task<Result<Result<U, E>, SynchronizerError>> IAsync<T>.WithLockedAsync<U, E>(Func<T, Task<Result<U, E>>> action)
         {
             return this.WithLockedAsync(action, CancellationToken.None);
         }
 
-        public async Task<Result<Result<U, E>, ISynchronizerError>> WithReadLockedAsync<U, E>(
+        public async Task<Result<Result<U, E>, SynchronizerError>> WithReadLockedAsync<U, E>(
             Func<T, Task<Result<U, E>>> action,
             CancellationToken cancellationToken = default)
             where U : notnull
             where E : notnull
         {
-            if (this.disposed != 0) return Result<Result<U, E>, ISynchronizerError>.Err(ISynchronizerError.Failed);
+            if (Volatile.Read(ref this.disposed) != 0) return Result<Result<U, E>, SynchronizerError>.Err(SynchronizerError.Disposed());
 
             try
             {
@@ -288,7 +288,7 @@ namespace Rustify.Utilities.Sync
                 {
                     var clonedValue = this.value.Clone();
                     var actionResult = await action(clonedValue).ConfigureAwait(false);
-                    return Result<Result<U, E>, ISynchronizerError>.Ok(actionResult);
+                    return Result<Result<U, E>, SynchronizerError>.Ok(actionResult);
                 }
                 finally
                 {
@@ -297,19 +297,19 @@ namespace Rustify.Utilities.Sync
             }
             catch (OperationCanceledException)
             {
-                return Result<Result<U, E>, ISynchronizerError>.Err(ISynchronizerError.Failed);
+                return Result<Result<U, E>, SynchronizerError>.Err(SynchronizerError.Cancelled());
             }
             catch (ObjectDisposedException)
             {
-                return Result<Result<U, E>, ISynchronizerError>.Err(ISynchronizerError.Failed);
+                return Result<Result<U, E>, SynchronizerError>.Err(SynchronizerError.Disposed());
             }
             catch (Exception)
             {
-                return Result<Result<U, E>, ISynchronizerError>.Err(ISynchronizerError.Failed);
+                return Result<Result<U, E>, SynchronizerError>.Err(SynchronizerError.Failed());
             }
         }
 
-        Task<Result<Result<U, E>, ISynchronizerError>> IAsyncRw<T>.WithReadLockedAsync<U, E>(Func<T, Task<Result<U, E>>> action)
+        Task<Result<Result<U, E>, SynchronizerError>> IAsyncRw<T>.WithReadLockedAsync<U, E>(Func<T, Task<Result<U, E>>> action)
         {
             return this.WithReadLockedAsync(action, CancellationToken.None);
         }
@@ -320,6 +320,11 @@ namespace Rustify.Utilities.Sync
 
             this.writeLock.Dispose();
             this.readerCountLock.Dispose();
+            
+            if (this.value is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
 
             GC.SuppressFinalize(this);
         }

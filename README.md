@@ -267,12 +267,6 @@ result.Match(
 // Type checking
 if (result.Is0) Console.WriteLine("It's a string");
 if (result.Is1) Console.WriteLine("It's an int");
-
-// Safe extraction
-if (result.TryGet0(out var str))
-{
-    Console.WriteLine($"Extracted string: {str}");
-}
 ```
 
 #### 3-ary TaggedUnion
@@ -458,9 +452,7 @@ var asyncResult = await mutex.LockAsync(cts.Token);
 | Member | Description |
 |--------|-------------|
 | `Is0`, `Is1`, `Is2` | Check which case is active |
-| `Tag` | Get the active case index (0, 1, or 2) |
 | `Match(...)` | Pattern match on all cases |
-| `TryGet0(out T)`, etc. | Safely extract value |
 | `_0<...>(value)`, `_1<...>(value)` | Static factory methods |
 | `__0(value)`, `__1(value)` | Instance factory methods (for same-type cases) |
 
@@ -479,6 +471,138 @@ Console.WriteLine(a.CompareTo(c));  // -1 (5 < 10)
 // Works with sorting
 var options = new[] { c, a, Option<int>.None() };
 Array.Sort(options);  // None, Some(5), Some(10)
+```
+
+## Migration Guide (v0.3.x → v0.4.0)
+
+### Breaking Changes
+
+#### 1. `Result.IsOk`/`IsErr` are now methods
+
+```csharp
+// Before (v0.3.x)
+if (result.IsOk) { ... }
+if (result.IsErr) { ... }
+
+// After (v0.4.0)
+if (result.IsOk()) { ... }
+if (result.IsErr()) { ... }
+```
+
+#### 2. Implicit conversions removed from Result
+
+```csharp
+// Before (v0.3.x) - implicit conversion
+Result<int, string> result = 42;
+Result<int, string> error = "error message";
+
+// After (v0.4.0) - explicit factory methods required
+Result<int, string> result = Result<int, string>.Ok(42);
+Result<int, string> error = Result<int, string>.Err("error message");
+// Or using the static helper:
+var result = Result.Ok<int, string>(42);
+var error = Result.Err<int, string>("error message");
+```
+
+#### 3. `Arc.Clone()` now returns a new instance
+
+```csharp
+// Each clone is now a separate handle with its own lifetime
+using var arc1 = Arc<Data>.New(data);
+using var arc2 = arc1.Clone();  // arc2 is a NEW Arc instance
+
+// Both must be disposed independently
+// The underlying data is disposed when the last handle is released
+```
+
+#### 4. `ISynchronizerError` replaced with `SynchronizerError` struct
+
+```csharp
+// Before (v0.3.x)
+Result<T, ISynchronizerError> result = rwLock.GetValue();
+if (result.IsErr() && result.UnwrapErr() == ISynchronizerError.Failed) { ... }
+
+// After (v0.4.0)
+Result<T, SynchronizerError> result = rwLock.GetValue();
+if (result.IsErr())
+{
+    var error = result.UnwrapErr();
+    // SynchronizerError now provides richer error information:
+    // - error.Kind (SynchronizerErrorKind enum)
+    // - error.Message (optional string)
+    // - error.InnerException (optional Exception)
+    
+    if (error.Kind == SynchronizerErrorKind.Disposed) { ... }
+    if (error.Kind == SynchronizerErrorKind.Cancelled) { ... }
+    if (error.Kind == SynchronizerErrorKind.Failed) { ... }
+}
+```
+
+### New Features in v0.4.0
+
+- **TaggedUnion equality**: All TaggedUnion variants now implement `IEquatable<T>`, `Equals`, `GetHashCode`, `ToString`, and equality operators
+- **Extended TaggedUnion**: Now supports 4, 5, and 6 type parameters in addition to the original 1-3
+- **`Weak<T>` for Arc**: Break circular references with weak pointers via `arc.Downgrade()` and `weak.Upgrade()`
+- **`RwLockRef<T>`**: Callback-based read-write lock for reference types without `IClone<T>` requirement
+- **`GenericMutexError` removed**: Now uses `SynchronizerError` for consistency with other sync primitives
+- **Richer error information**: `SynchronizerError` struct provides `Kind`, `Message`, and `InnerException` properties
+- **Improved null safety**: Delegate parameters (Func/Action) now throw `ArgumentNullException` when null
+- **IDisposable handling**: `GenericMutex` and `RwLock` now properly dispose contained values that implement `IDisposable`
+
+### `Weak<T>` (Weak Reference for Arc)
+
+`Weak<T>` provides weak references to `Arc<T>` values, allowing circular reference breaking similar to Rust's `std::sync::Weak`.
+
+```csharp
+using Rustify.Utilities.Sync;
+
+var arc = Arc<MyClass>.New(new MyClass());
+
+// Create a weak reference (does not increment strong count)
+var weak = arc.Downgrade();
+
+// Check if the referenced value is still alive
+if (weak.IsAlive)
+{
+    // Try to upgrade to a strong reference
+    var upgraded = weak.Upgrade();
+    if (upgraded.IsSome())
+    {
+        using var strongRef = upgraded.Unwrap();
+        Console.WriteLine("Successfully upgraded weak reference");
+    }
+}
+
+// After all Arc instances are disposed, Upgrade returns None
+arc.Dispose();
+var result = weak.Upgrade();  // Returns None
+```
+
+### `RwLockRef<T>` (Callback-Based Read-Write Lock)
+
+`RwLockRef<T>` provides a read-write lock for reference types that doesn't require `IClone<T>`. Access is through callbacks only, ensuring locks are always properly released.
+
+```csharp
+using Rustify.Utilities.Sync;
+
+var rwLock = new RwLockRef<List<int>>(new List<int> { 1, 2, 3 });
+
+// Read access (multiple concurrent readers allowed)
+var count = rwLock.WithRead(list => list.Count);
+Console.WriteLine($"Count: {count.Unwrap()}");  // Output: 3
+
+// Write access (exclusive, replaces the value)
+rwLock.WithWrite(list => new List<int> { 4, 5, 6 });
+
+// Write access (exclusive, mutates in place)
+rwLock.WithWriteMutate(list => list.Add(7));
+
+// Async variants with cancellation support
+var result = await rwLock.WithReadAsync(async list =>
+{
+    await Task.Delay(100);
+    return list.Count;
+});
 ```
 
 ## Contributing

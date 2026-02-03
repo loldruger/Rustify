@@ -176,7 +176,7 @@ public sealed class OptionTests // Class name changed for clarity
     {
         var option = Option.Some("value");
         var result = option.OkOr("error");
-        Assert.IsTrue(result.IsOk); // Corrected: IsOk is a property
+        Assert.IsTrue(result.IsOk());
         Assert.AreEqual("value", result.Unwrap());
     }
 
@@ -186,7 +186,7 @@ public sealed class OptionTests // Class name changed for clarity
         var option = Option.None<string>();
         var error = "error_message";
         var result = option.OkOr(error);
-        Assert.IsTrue(result.IsErr); // Corrected: IsErr is a property
+        Assert.IsTrue(result.IsErr());
         Assert.AreEqual(error, result.UnwrapErr());
     }
 
@@ -195,7 +195,7 @@ public sealed class OptionTests // Class name changed for clarity
     {
         var option = Option.Some(123);
         var result = option.OkOrElse(() => "fallback_error");
-        Assert.IsTrue(result.IsOk); // Corrected: IsOk is a property
+        Assert.IsTrue(result.IsOk());
         Assert.AreEqual(123, result.Unwrap());
     }
 
@@ -205,7 +205,7 @@ public sealed class OptionTests // Class name changed for clarity
         var option = Option.None<int>();
         var errorMessage = "generated_error";
         var result = option.OkOrElse(() => errorMessage);
-        Assert.IsTrue(result.IsErr); // Corrected: IsErr is a property
+        Assert.IsTrue(result.IsErr());
         Assert.AreEqual(errorMessage, result.UnwrapErr());
     }
 

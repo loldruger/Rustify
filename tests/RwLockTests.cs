@@ -49,7 +49,7 @@ public sealed class RwLockTests
         var rwLock = new RwLock<CloneableData>(initialData);
 
         var result = rwLock.GetValue();
-        Assert.IsTrue(result.IsOk);
+        Assert.IsTrue(result.IsOk());
         Assert.AreEqual(initialData, result.Unwrap());
     }
 
@@ -66,7 +66,7 @@ public sealed class RwLockTests
         var rwLock = new RwLock<CloneableData>(initialData);
 
         var result = await rwLock.GetValueAsync();
-        Assert.IsTrue(result.IsOk);
+        Assert.IsTrue(result.IsOk());
         Assert.AreEqual(initialData, result.Unwrap());
     }
 
@@ -82,10 +82,10 @@ public sealed class RwLockTests
             data.Name = updatedName; 
             return data; 
         });
-        Assert.IsTrue(updateResult.IsOk);
+        Assert.IsTrue(updateResult.IsOk());
 
         var getResult = rwLock.GetValue();
-        Assert.IsTrue(getResult.IsOk);
+        Assert.IsTrue(getResult.IsOk());
         Assert.AreEqual(updatedName, getResult.Unwrap().Name);
         Assert.AreEqual(initialData.Value, getResult.Unwrap().Value); // Value should be the same
     }
@@ -102,10 +102,10 @@ public sealed class RwLockTests
             data.Value = updatedValue;
             return data;
         });
-        Assert.IsTrue(updateResult.IsOk);
+        Assert.IsTrue(updateResult.IsOk());
 
         var getResult = await rwLock.GetValueAsync();
-        Assert.IsTrue(getResult.IsOk);
+        Assert.IsTrue(getResult.IsOk());
         Assert.AreEqual(updatedValue, getResult.Unwrap().Value);
         Assert.AreEqual(initialData.Name, getResult.Unwrap().Name); // Name should be the same
     }
@@ -116,7 +116,7 @@ public sealed class RwLockTests
         var initialData = new CloneableData(100, "ConcurrentRead");
         var rwLock = new RwLock<CloneableData>(initialData);
         int numReaders = 5;
-        var tasks = new List<Task<Result<CloneableData, ISynchronizerError>>>();
+        var tasks = new List<Task<Result<CloneableData, SynchronizerError>>>();
 
         for (int i = 0; i < numReaders; i++)
         {
@@ -127,7 +127,7 @@ public sealed class RwLockTests
 
         foreach (var result in results)
         {
-            Assert.IsTrue(result.IsOk);
+            Assert.IsTrue(result.IsOk());
             Assert.AreEqual(initialData, result.Unwrap());
         }
     }
@@ -146,8 +146,8 @@ public sealed class RwLockTests
             List<CloneableData> readValues = new List<CloneableData>();
             for (int i = 0; i < 5; i++)
             {
-                var res = await rwLock.GetValueAsync();
-                if (res.IsOk) readValues.Add(res.Unwrap());
+                 var res = await rwLock.GetValueAsync();
+                 if (res.IsOk()) readValues.Add(res.Unwrap());
                 await Task.Delay(10); // Small delay to allow writer to interleave
             }
             return readValues;
@@ -164,10 +164,10 @@ public sealed class RwLockTests
 
         await Task.WhenAll(readerTask, writerTask);
 
-        Assert.IsTrue(writerTask.Result.IsOk);
+        Assert.IsTrue(writerTask.Result.IsOk());
 
         var finalReadResult = await rwLock.GetValueAsync();
-        Assert.IsTrue(finalReadResult.IsOk);
+        Assert.IsTrue(finalReadResult.IsOk());
         Assert.AreEqual(finalValue, finalReadResult.Unwrap().Value);
         Assert.AreEqual(finalName, finalReadResult.Unwrap().Name);
 
@@ -191,9 +191,9 @@ public sealed class RwLockTests
             return Result.Ok<int, string>(clone.Value); 
         });
 
-        Assert.IsTrue(outerResult.IsOk);
+        Assert.IsTrue(outerResult.IsOk());
         var actionResult = outerResult.Unwrap();
-        Assert.IsTrue(actionResult.IsOk);
+        Assert.IsTrue(actionResult.IsOk());
         Assert.AreEqual(newValue, actionResult.Unwrap());
     }
 
@@ -210,14 +210,14 @@ public sealed class RwLockTests
             return Result.Ok<string, int>($"Read: {clone.Name} - {clone.Value}");
         });
 
-        Assert.IsTrue(outerResult.IsOk);
+        Assert.IsTrue(outerResult.IsOk());
         var actionResult = outerResult.Unwrap();
-        Assert.IsTrue(actionResult.IsOk);
+        Assert.IsTrue(actionResult.IsOk());
         Assert.AreEqual($"Read: {initialData.Name} - {initialData.Value}", actionResult.Unwrap());
 
         // Ensure original value is unchanged
         var originalValue = await rwLock.GetValueAsync();
-        Assert.IsTrue(originalValue.IsOk);
+        Assert.IsTrue(originalValue.IsOk());
         Assert.AreEqual(initialData, originalValue.Unwrap());
     }
 
@@ -233,32 +233,32 @@ public sealed class RwLockTests
             // return data; // Unreachable
         });
 
-        Assert.IsTrue(result.IsErr);
-        Assert.AreEqual(ISynchronizerError.Failed, result.UnwrapErr());
+         Assert.IsTrue(result.IsErr());
+         Assert.AreEqual(SynchronizerErrorKind.Failed, result.UnwrapErr().Kind);
 
-        // Check that the original value is unchanged
-        var originalValue = rwLock.GetValue();
-        Assert.IsTrue(originalValue.IsOk);
-        Assert.AreEqual(initialData, originalValue.Unwrap());
-    }
+         // Check that the original value is unchanged
+         var originalValue = rwLock.GetValue();
+         Assert.IsTrue(originalValue.IsOk());
+         Assert.AreEqual(initialData, originalValue.Unwrap());
+     }
 
-    [TestMethod]
-    public async Task UpdateValueAsync_HandlesExceptionInUpdateFunc()
-    {
-        var initialData = new CloneableData(2, "AsyncErrorTest");
-        var rwLock = new RwLock<CloneableData>(initialData);
+     [TestMethod]
+     public async Task UpdateValueAsync_HandlesExceptionInUpdateFunc()
+     {
+         var initialData = new CloneableData(2, "AsyncErrorTest");
+         var rwLock = new RwLock<CloneableData>(initialData);
 
-        var result = await rwLock.UpdateValueAsync(data => 
-        {
-            throw new InvalidOperationException("Async update failed");
-            // return data; // Unreachable
-        });
+         var result = await rwLock.UpdateValueAsync(data => 
+         {
+             throw new InvalidOperationException("Async update failed");
+             // return data; // Unreachable
+         });
 
-        Assert.IsTrue(result.IsErr);
-        Assert.AreEqual(ISynchronizerError.Failed, result.UnwrapErr());
+         Assert.IsTrue(result.IsErr());
+         Assert.AreEqual(SynchronizerErrorKind.Failed, result.UnwrapErr().Kind);
 
         var originalValue = await rwLock.GetValueAsync();
-        Assert.IsTrue(originalValue.IsOk);
+        Assert.IsTrue(originalValue.IsOk());
         Assert.AreEqual(initialData, originalValue.Unwrap());
     }
 }

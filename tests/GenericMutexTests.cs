@@ -13,7 +13,7 @@ public sealed class GenericMutexTests
     {
         using var mutex = new GenericMutex<int>(42);
         var result = mutex.GetValue();
-        Assert.IsTrue(result.IsOk);
+        Assert.IsTrue(result.IsOk());
         Assert.AreEqual(42, result.Unwrap());
     }
 
@@ -22,7 +22,7 @@ public sealed class GenericMutexTests
     {
         using var mutex = new GenericMutex<string>("test");
         var result = mutex.TryGetValue();
-        Assert.IsTrue(result.IsOk);
+        Assert.IsTrue(result.IsOk());
         Assert.AreEqual("test", result.Unwrap());
     }
 
@@ -31,7 +31,7 @@ public sealed class GenericMutexTests
     {
         using var mutex = new GenericMutex<int>(100);
         var result = await mutex.GetValueAsync();
-        Assert.IsTrue(result.IsOk);
+        Assert.IsTrue(result.IsOk());
         Assert.AreEqual(100, result.Unwrap());
     }
 
@@ -40,7 +40,7 @@ public sealed class GenericMutexTests
     {
         using var mutex = new GenericMutex<string>("async_test");
         var result = await mutex.TryGetValueAsync();
-        Assert.IsTrue(result.IsOk);
+        Assert.IsTrue(result.IsOk());
         Assert.AreEqual("async_test", result.Unwrap());
     }
 
@@ -49,10 +49,10 @@ public sealed class GenericMutexTests
     {
         using var mutex = new GenericMutex<int>(10);
         var updateResult = mutex.UpdateValue(x => x + 5);
-        Assert.IsTrue(updateResult.IsOk);
+        Assert.IsTrue(updateResult.IsOk());
 
         var getResult = mutex.GetValue();
-        Assert.IsTrue(getResult.IsOk);
+        Assert.IsTrue(getResult.IsOk());
         Assert.AreEqual(15, getResult.Unwrap());
     }
 
@@ -61,10 +61,10 @@ public sealed class GenericMutexTests
     {
         using var mutex = new GenericMutex<int>(20);
         var updateResult = await mutex.UpdateValueAsync(x => x * 2);
-        Assert.IsTrue(updateResult.IsOk);
+        Assert.IsTrue(updateResult.IsOk());
 
         var getResult = await mutex.GetValueAsync();
-        Assert.IsTrue(getResult.IsOk);
+        Assert.IsTrue(getResult.IsOk());
         Assert.AreEqual(40, getResult.Unwrap());
     }
 
@@ -74,9 +74,9 @@ public sealed class GenericMutexTests
         using var mutex = new GenericMutex<int>(5);
         var result = mutex.WithLock(value => Rustify.Monads.Result<int, string>.Ok(value * 3));
         
-        Assert.IsTrue(result.IsOk);
+        Assert.IsTrue(result.IsOk());
         var innerResult = result.Unwrap();
-        Assert.IsTrue(innerResult.IsOk);
+        Assert.IsTrue(innerResult.IsOk());
         Assert.AreEqual(15, innerResult.Unwrap());
     }
 
@@ -90,9 +90,9 @@ public sealed class GenericMutexTests
             return Rustify.Monads.Result<int, string>.Ok(value + 3);
         });
 
-        Assert.IsTrue(result.IsOk);
+        Assert.IsTrue(result.IsOk());
         var innerResult = result.Unwrap();
-        Assert.IsTrue(innerResult.IsOk);
+        Assert.IsTrue(innerResult.IsOk());
         Assert.AreEqual(10, innerResult.Unwrap());
     }
 
@@ -110,7 +110,7 @@ public sealed class GenericMutexTests
         var mutex = new GenericMutex<int>(1);
         mutex.Dispose();
         var result = mutex.GetValue();
-        Assert.IsTrue(result.IsErr);
+        Assert.IsTrue(result.IsErr());
         Assert.AreEqual(GenericMutexError.MutexFailed, result.Err().Unwrap());
     }
 
@@ -120,7 +120,7 @@ public sealed class GenericMutexTests
         var mutex = new GenericMutex<int>(1);
         mutex.Dispose();
         var result = await mutex.GetValueAsync();
-        Assert.IsTrue(result.IsErr);
+        Assert.IsTrue(result.IsErr());
         Assert.AreEqual(GenericMutexError.MutexFailed, result.Err().Unwrap());
     }
 
@@ -130,7 +130,7 @@ public sealed class GenericMutexTests
         var mutex = new GenericMutex<int>(1);
         mutex.Dispose();
         var result = mutex.TryGetValue();
-        Assert.IsTrue(result.IsErr);
+        Assert.IsTrue(result.IsErr());
         Assert.AreEqual(GenericMutexError.MutexFailed, result.Err().Unwrap());
     }
 
@@ -140,7 +140,7 @@ public sealed class GenericMutexTests
         var mutex = new GenericMutex<int>(1);
         mutex.Dispose();
         var result = mutex.UpdateValue(x => x + 1);
-        Assert.IsTrue(result.IsErr);
+        Assert.IsTrue(result.IsErr());
         Assert.AreEqual(GenericMutexError.MutexFailed, result.Err().Unwrap());
     }
 
@@ -166,7 +166,7 @@ public sealed class GenericMutexTests
         await Task.WhenAll(tasks);
 
         var result = mutex.GetValue();
-        Assert.IsTrue(result.IsOk);
+        Assert.IsTrue(result.IsOk());
         Assert.AreEqual(numTasks * incrementsPerTask, result.Unwrap());
     }
 
@@ -178,7 +178,7 @@ public sealed class GenericMutexTests
         cts.Cancel();
 
         var result = await mutex.GetValueAsync(cts.Token);
-        Assert.IsTrue(result.IsErr);
+        Assert.IsTrue(result.IsErr());
         Assert.AreEqual(GenericMutexError.MutexFailed, result.Err().Unwrap());
     }
 
@@ -190,7 +190,7 @@ public sealed class GenericMutexTests
         cts.Cancel();
 
         var result = await mutex.UpdateValueAsync(x => x + 1, cts.Token);
-        Assert.IsTrue(result.IsErr);
+        Assert.IsTrue(result.IsErr());
         Assert.AreEqual(GenericMutexError.MutexFailed, result.Err().Unwrap());
     }
 }

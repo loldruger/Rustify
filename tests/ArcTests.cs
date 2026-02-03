@@ -47,25 +47,21 @@ public sealed class ArcTests
         Assert.AreSame(arc1.GetValue(), arc2.GetValue()); // For reference types, they should be the same instance initially.
     }
 
-    [TestMethod]
-    public void Release_DecrementsCount()
-    {
-        var data = "release_test";
-        var arc1 = new Arc<string>(data);
-        var arc2 = arc1.Clone(); // Count is now 2 (arc1, arc2)
+     [TestMethod]
+     public void Release_DecrementsCount()
+     {
+         var data = "release_test";
+         var arc1 = new Arc<string>(data);
+         var arc2 = arc1.Clone(); // Count is now 2 (arc1, arc2)
 
-        var countAfterRelease1 = arc2.Release(); // arc2 releases, count should be 1
-        // We can't directly assert countAfterRelease1 is 1 without exposing count or more complex setup.
-        // Instead, we'll check that arc1 is still valid.
-        Assert.AreEqual(data, arc1.GetValue());
+         arc2.Dispose(); // arc2 releases, count should be 1
+         Assert.AreEqual(data, arc1.GetValue());
 
-        var countAfterRelease2 = arc1.Release(); // arc1 releases, count should be 0
-        Assert.AreEqual(0, countAfterRelease2);
+         arc1.Dispose(); // arc1 releases, count should be 0
 
-        // After all releases, GetValue should throw
-        Assert.Throws<InvalidOperationException>(() => arc1.GetValue());
-        Assert.Throws<InvalidOperationException>(() => arc2.GetValue()); // arc2 is also effectively disposed
-    }
+         Assert.Throws<InvalidOperationException>(() => arc1.GetValue());
+         Assert.Throws<InvalidOperationException>(() => arc2.GetValue());
+     }
 
     [TestMethod]
     public void Dispose_ReleasesArc()
@@ -87,7 +83,7 @@ public sealed class ArcTests
     {
         var data = "disposed_arc";
         var arc = new Arc<string>(data);
-        arc.Release(); // Release the initial reference
+        arc.Dispose(); // Release the initial reference
 
         Assert.Throws<InvalidOperationException>(() => arc.GetValue());
     }
@@ -97,21 +93,20 @@ public sealed class ArcTests
     {
         var data = "disposed_clone";
         var arc = new Arc<string>(data);
-        arc.Release(); // Release the initial reference
+        arc.Dispose(); // Release the initial reference
 
         Assert.Throws<InvalidOperationException>(() => arc.Clone());
     }
 
-    [TestMethod]
-    public void Release_HandlesMultipleReleasesCorrectly()
-    {
-        var data = "multi_release";
-        var arc = new Arc<string>(data);
-        arc.Release(); // Count becomes 0
-        var finalCount = arc.Release(); // Should not go negative, still 0 and disposed
-        Assert.AreEqual(0, finalCount);
-        Assert.Throws<InvalidOperationException>(() => arc.GetValue());
-    }
+     [TestMethod]
+     public void Release_HandlesMultipleReleasesCorrectly()
+     {
+         var data = "multi_release";
+         var arc = new Arc<string>(data);
+         arc.Dispose(); // Count becomes 0
+         arc.Dispose(); // Should not go negative, still 0 and disposed
+         Assert.Throws<InvalidOperationException>(() => arc.GetValue());
+     }
 
     [TestMethod]
     public void DisposableValue_IsDisposed_WhenLastArcReleased()
@@ -121,9 +116,9 @@ public sealed class ArcTests
         var arcClone = arc.Clone();
 
         Assert.IsFalse(disposableData.IsDisposed);
-        arc.Release();
+        arc.Dispose();
         Assert.IsFalse(disposableData.IsDisposed); // Still one reference (arcClone)
-        arcClone.Release(); // Last reference released
+        arcClone.Dispose(); // Last reference released
         Assert.IsTrue(disposableData.IsDisposed);
     }
 
@@ -151,7 +146,7 @@ public sealed class ArcTests
                 Thread.Sleep(10); 
                 for (int j = 0; j < clonesPerTask; j++)
                 {
-                    localClones[j].Release();
+                    localClones[j].Dispose();
                 }
             });
         }
@@ -161,7 +156,7 @@ public sealed class ArcTests
         // All clones from tasks are released, only original 'arc' reference might remain if not disposed.
         // Here, we test the main 'arc' reference.
         Assert.AreEqual(data, arc.GetValue()); 
-        arc.Release(); // Release the original reference
+        arc.Dispose(); // Release the original reference
         Assert.Throws<InvalidOperationException>(() => arc.GetValue());
     }
 
@@ -175,10 +170,10 @@ public sealed class ArcTests
         Assert.AreEqual(data, arc.GetValue());
         Assert.AreEqual(data, arcClone.GetValue());
 
-        arc.Release();
+        arc.Dispose();
         Assert.AreEqual(data, arcClone.GetValue()); // Clone still valid
 
-        arcClone.Release();
+        arcClone.Dispose();
         Assert.Throws<InvalidOperationException>(() => arc.GetValue());
         Assert.Throws<InvalidOperationException>(() => arcClone.GetValue());
     }

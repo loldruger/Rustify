@@ -81,6 +81,6 @@ namespace Rustify.Utilities.Synchronizer
 
     public interface ISynchronizer<T> where T : notnull
     {
-        Result<T, ISynchronizerError> GetValue();
+        Result<T, SynchronizerError> GetValue();
     }
 }

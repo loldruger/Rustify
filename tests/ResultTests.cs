@@ -15,8 +15,8 @@ public sealed class ResultTests
         var value = "test_ok";
         var result = Result.Ok<string, string>(value);
 
-        Assert.IsTrue(result.IsOk);
-        Assert.IsFalse(result.IsErr);
+        Assert.IsTrue(result.IsOk());
+        Assert.IsFalse(result.IsErr());
         Assert.AreEqual(value, result.Unwrap());
     }
 
@@ -26,26 +26,12 @@ public sealed class ResultTests
         var error = "test_err";
         var result = Result.Err<string, string>(error);
 
-        Assert.IsFalse(result.IsOk);
-        Assert.IsTrue(result.IsErr);
+        Assert.IsFalse(result.IsOk());
+        Assert.IsTrue(result.IsErr());
         Assert.AreEqual(error, result.UnwrapErr());
     }
 
-    [TestMethod]
-    public void ImplicitConversion_FromValue_CreatesOk()
-    {
-        Result<string, int> result = DefaultOkValue;
-        Assert.IsTrue(result.IsOk);
-        Assert.AreEqual(DefaultOkValue, result.Unwrap());
-    }
-
-    [TestMethod]
-    public void ImplicitConversion_FromError_CreatesErr()
-    {
-        Result<int, string> result = DefaultError;
-        Assert.IsTrue(result.IsErr);
-        Assert.AreEqual(DefaultError, result.UnwrapErr());
-    }
+    // Implicit conversion tests removed - implicit operators removed in v0.4.0
 
     [TestMethod]
     public void Unwrap_ReturnsValue_WhenOk()
@@ -104,7 +90,7 @@ public sealed class ResultTests
     {
         var result = Result.Ok<int, string>(10);
         var nextResult = result.AndThen(x => Result.Ok<int, string>(x * 2));
-        Assert.IsTrue(nextResult.IsOk);
+        Assert.IsTrue(nextResult.IsOk());
         Assert.AreEqual(20, nextResult.Unwrap());
     }
 
@@ -113,7 +99,7 @@ public sealed class ResultTests
     {
         var result = Result.Err<int, string>(DefaultError);
         var nextResult = result.AndThen(x => Result.Ok<int, string>(x * 2)); // This function should not be called
-        Assert.IsTrue(nextResult.IsErr);
+        Assert.IsTrue(nextResult.IsErr());
         Assert.AreEqual(DefaultError, nextResult.UnwrapErr());
     }
 
@@ -123,7 +109,7 @@ public sealed class ResultTests
         var result = Result.Ok<int, string>(10);
         var newError = "new_error_from_andthen";
         var nextResult = result.AndThen(x => Result.Err<int, string>(newError));
-        Assert.IsTrue(nextResult.IsErr);
+        Assert.IsTrue(nextResult.IsErr());
         Assert.AreEqual(newError, nextResult.UnwrapErr());
     }
     
@@ -132,7 +118,7 @@ public sealed class ResultTests
     {
         var result = Result.Ok<string, int>(DefaultOkValue);
         var nextResult = result.OrElse(e => Result.Ok<string, string>($"fallback_from_{e}")); // This function should not be called
-        Assert.IsTrue(nextResult.IsOk);
+        Assert.IsTrue(nextResult.IsOk());
         Assert.AreEqual(DefaultOkValue, nextResult.Unwrap());
     }
 
@@ -143,7 +129,7 @@ public sealed class ResultTests
         var result = Result.Err<string, int>(initialError);
         var fallbackValue = "fallback_value";
         var nextResult = result.OrElse(e => Result.Ok<string, string>(fallbackValue));
-        Assert.IsTrue(nextResult.IsOk);
+        Assert.IsTrue(nextResult.IsOk());
         Assert.AreEqual(fallbackValue, nextResult.Unwrap());
     }
 
@@ -154,7 +140,7 @@ public sealed class ResultTests
         var newErrorFromOrElse = "new_error_from_orelse";
         var result = Result.Err<string, int>(initialError);
         var nextResult = result.OrElse(e => Result.Err<string, string>(newErrorFromOrElse));
-        Assert.IsTrue(nextResult.IsErr);
+        Assert.IsTrue(nextResult.IsErr());
         Assert.AreEqual(newErrorFromOrElse, nextResult.UnwrapErr());
     }
 
@@ -192,41 +178,41 @@ public sealed class ResultTests
         Assert.IsTrue(option.IsNone());
     }
 
-    [TestMethod]
-    public void Map_TransformsValue_WhenOk()
-    {
-        var result = Result.Ok<int, string>(5);
-        var mappedResult = result.Map(x => x * 10);
-        Assert.IsTrue(mappedResult.IsOk);
-        Assert.AreEqual(50, mappedResult.Unwrap());
-    }
+     [TestMethod]
+     public void Map_TransformsValue_WhenOk()
+     {
+         var result = Result.Ok<int, string>(5);
+         var mappedResult = result.Map(x => x * 10);
+         Assert.IsTrue(mappedResult.IsOk());
+         Assert.AreEqual(50, mappedResult.Unwrap());
+     }
 
-    [TestMethod]
-    public void Map_ReturnsErr_WhenErr()
-    {
-        var result = Result.Err<int, string>(DefaultError);
-        var mappedResult = result.Map(x => x * 10); // This function should not be called
-        Assert.IsTrue(mappedResult.IsErr);
-        Assert.AreEqual(DefaultError, mappedResult.UnwrapErr());
-    }
+     [TestMethod]
+     public void Map_ReturnsErr_WhenErr()
+     {
+         var result = Result.Err<int, string>(DefaultError);
+         var mappedResult = result.Map(x => x * 10); // This function should not be called
+         Assert.IsTrue(mappedResult.IsErr());
+         Assert.AreEqual(DefaultError, mappedResult.UnwrapErr());
+     }
 
-    [TestMethod]
-    public void MapErr_TransformsError_WhenErr()
-    {
-        var result = Result.Err<string, int>(100);
-        var mappedResult = result.MapErr(e => $"Error code: {e}");
-        Assert.IsTrue(mappedResult.IsErr);
-        Assert.AreEqual("Error code: 100", mappedResult.UnwrapErr());
-    }
+     [TestMethod]
+     public void MapErr_TransformsError_WhenErr()
+     {
+         var result = Result.Err<string, int>(100);
+         var mappedResult = result.MapErr(e => $"Error code: {e}");
+         Assert.IsTrue(mappedResult.IsErr());
+         Assert.AreEqual("Error code: 100", mappedResult.UnwrapErr());
+     }
 
-    [TestMethod]
-    public void MapErr_ReturnsOk_WhenOk()
-    {
-        var result = Result.Ok<string, int>(DefaultOkValue);
-        var mappedResult = result.MapErr(e => $"Error code: {e}"); // This function should not be called
-        Assert.IsTrue(mappedResult.IsOk);
-        Assert.AreEqual(DefaultOkValue, mappedResult.Unwrap());
-    }
+     [TestMethod]
+     public void MapErr_ReturnsOk_WhenOk()
+     {
+         var result = Result.Ok<string, int>(DefaultOkValue);
+         var mappedResult = result.MapErr(e => $"Error code: {e}"); // This function should not be called
+         Assert.IsTrue(mappedResult.IsOk());
+         Assert.AreEqual(DefaultOkValue, mappedResult.Unwrap());
+     }
     
     [TestMethod]
     public void MapOr_ReturnsMappedValue_WhenOk()
@@ -266,47 +252,47 @@ public sealed class ResultTests
         Assert.AreEqual("Error was: BadInput", mappedValue);
     }
 
-    [TestMethod]
-    public void Flatten_ReturnsInnerOk_WhenOuterAndInnerAreOk()
-    {
-        var innerOk = Result.Ok<int, string>(100);
-        var outerOk = Result.Ok<Result<int, string>, string>(innerOk);
-        var flattened = Result<int, string>.Flatten(outerOk);
-        Assert.IsTrue(flattened.IsOk);
-        Assert.AreEqual(100, flattened.Unwrap());
-    }
+     [TestMethod]
+     public void Flatten_ReturnsInnerOk_WhenOuterAndInnerAreOk()
+     {
+         var innerOk = Result.Ok<int, string>(100);
+         var outerOk = Result.Ok<Result<int, string>, string>(innerOk);
+         var flattened = Result<int, string>.Flatten(outerOk);
+         Assert.IsTrue(flattened.IsOk());
+         Assert.AreEqual(100, flattened.Unwrap());
+     }
 
-    [TestMethod]
-    public void Flatten_ReturnsInnerErr_WhenOuterIsOkAndInnerIsErr()
-    {
-        var innerErr = Result.Err<int, string>("InnerError");
-        var outerOk = Result.Ok<Result<int, string>, string>(innerErr);
-        var flattened = Result<int, string>.Flatten(outerOk);
-        Assert.IsTrue(flattened.IsErr);
-        Assert.AreEqual("InnerError", flattened.UnwrapErr());
-    }
+     [TestMethod]
+     public void Flatten_ReturnsInnerErr_WhenOuterIsOkAndInnerIsErr()
+     {
+         var innerErr = Result.Err<int, string>("InnerError");
+         var outerOk = Result.Ok<Result<int, string>, string>(innerErr);
+         var flattened = Result<int, string>.Flatten(outerOk);
+         Assert.IsTrue(flattened.IsErr());
+         Assert.AreEqual("InnerError", flattened.UnwrapErr());
+     }
 
-    [TestMethod]
-    public void Flatten_ReturnsOuterErr_WhenOuterIsErr()
-    {
-        var outerErr = Result.Err<Result<int, string>, string>("OuterError");
-        var flattened = Result<int, string>.Flatten(outerErr);
-        Assert.IsTrue(flattened.IsErr);
-        Assert.AreEqual("OuterError", flattened.UnwrapErr());
-    }
+     [TestMethod]
+     public void Flatten_ReturnsOuterErr_WhenOuterIsErr()
+     {
+         var outerErr = Result.Err<Result<int, string>, string>("OuterError");
+         var flattened = Result<int, string>.Flatten(outerErr);
+         Assert.IsTrue(flattened.IsErr());
+         Assert.AreEqual("OuterError", flattened.UnwrapErr());
+     }
 
-    [TestMethod]
-    public void Transpose_ReturnsSomeOk_WhenResultIsOkWithSome()
-    {
-        var optionSome = Option.Some(DefaultOkValue);
-        var resultOkOptionSome = Result.Ok<Option<string>, int>(optionSome);
-        var transposed = Result<string, int>.Transpose(resultOkOptionSome);
+     [TestMethod]
+     public void Transpose_ReturnsSomeOk_WhenResultIsOkWithSome()
+     {
+         var optionSome = Option.Some(DefaultOkValue);
+         var resultOkOptionSome = Result.Ok<Option<string>, int>(optionSome);
+         var transposed = Result<string, int>.Transpose(resultOkOptionSome);
 
-        Assert.IsTrue(transposed.IsSome());
-        var innerResult = transposed.Unwrap();
-        Assert.IsTrue(innerResult.IsOk);
-        Assert.AreEqual(DefaultOkValue, innerResult.Unwrap());
-    }
+         Assert.IsTrue(transposed.IsSome());
+         var innerResult = transposed.Unwrap();
+         Assert.IsTrue(innerResult.IsOk());
+         Assert.AreEqual(DefaultOkValue, innerResult.Unwrap());
+     }
 
     [TestMethod]
     public void Transpose_ReturnsNone_WhenResultIsOkWithNone()
@@ -327,7 +313,7 @@ public sealed class ResultTests
 
         Assert.IsTrue(transposed.IsSome());
         var innerResult = transposed.Unwrap();
-        Assert.IsTrue(innerResult.IsErr);
+        Assert.IsTrue(innerResult.IsErr());
         Assert.AreEqual(errorValue, innerResult.UnwrapErr());
     }
 
@@ -471,7 +457,7 @@ public sealed class ResultTests
         var result1 = Result.Ok<int, string>(1);
         var result2 = Result.Ok<string, string>("hello");
         var combined = result1.And(result2);
-        Assert.IsTrue(combined.IsOk);
+        Assert.IsTrue(combined.IsOk());
         Assert.AreEqual("hello", combined.Unwrap());
     }
 
@@ -481,7 +467,7 @@ public sealed class ResultTests
         var result1 = Result.Err<int, string>("error");
         var result2 = Result.Ok<string, string>("hello");
         var combined = result1.And(result2);
-        Assert.IsTrue(combined.IsErr);
+        Assert.IsTrue(combined.IsErr());
         Assert.AreEqual("error", combined.UnwrapErr());
     }
 
@@ -491,7 +477,7 @@ public sealed class ResultTests
         var result1 = Result.Ok<int, string>(1);
         var result2 = Result.Err<string, string>("other_error");
         var combined = result1.And(result2);
-        Assert.IsTrue(combined.IsErr);
+        Assert.IsTrue(combined.IsErr());
         Assert.AreEqual("other_error", combined.UnwrapErr());
     }
 
@@ -501,7 +487,7 @@ public sealed class ResultTests
         var result1 = Result.Ok<int, string>(1);
         var result2 = Result.Ok<int, string>(2);
         var combined = result1.Or(result2);
-        Assert.IsTrue(combined.IsOk);
+        Assert.IsTrue(combined.IsOk());
         Assert.AreEqual(1, combined.Unwrap());
     }
 
@@ -511,7 +497,7 @@ public sealed class ResultTests
         var result1 = Result.Err<int, string>("error");
         var result2 = Result.Ok<int, string>(2);
         var combined = result1.Or(result2);
-        Assert.IsTrue(combined.IsOk);
+        Assert.IsTrue(combined.IsOk());
         Assert.AreEqual(2, combined.Unwrap());
     }
 
@@ -521,7 +507,7 @@ public sealed class ResultTests
         var result1 = Result.Err<int, string>("error1");
         var result2 = Result.Err<int, string>("error2");
         var combined = result1.Or(result2);
-        Assert.IsTrue(combined.IsErr);
+        Assert.IsTrue(combined.IsErr());
         Assert.AreEqual("error2", combined.UnwrapErr());
     }
 
@@ -532,7 +518,7 @@ public sealed class ResultTests
         var inspected = 0;
         var returned = result.Inspect(x => inspected = x);
         Assert.AreEqual(42, inspected);
-        Assert.IsTrue(returned.IsOk);
+        Assert.IsTrue(returned.IsOk());
     }
 
     [TestMethod]
@@ -542,7 +528,7 @@ public sealed class ResultTests
         var executed = false;
         var returned = result.Inspect(x => executed = true);
         Assert.IsFalse(executed);
-        Assert.IsTrue(returned.IsErr);
+        Assert.IsTrue(returned.IsErr());
     }
 
     [TestMethod]
@@ -552,7 +538,7 @@ public sealed class ResultTests
         var inspected = "";
         var returned = result.InspectErr(e => inspected = e);
         Assert.AreEqual("error", inspected);
-        Assert.IsTrue(returned.IsErr);
+        Assert.IsTrue(returned.IsErr());
     }
 
     [TestMethod]
@@ -562,7 +548,7 @@ public sealed class ResultTests
         var executed = false;
         var returned = result.InspectErr(e => executed = true);
         Assert.IsFalse(executed);
-        Assert.IsTrue(returned.IsOk);
+        Assert.IsTrue(returned.IsOk());
     }
 
     [TestMethod]
@@ -772,7 +758,7 @@ public sealed class ResultTests
     {
         var result = Result.Ok<int, string>(5);
         var mapped = result.Select(x => x * 2);
-        Assert.IsTrue(mapped.IsOk);
+        Assert.IsTrue(mapped.IsOk());
         Assert.AreEqual(10, mapped.Unwrap());
     }
 
@@ -781,7 +767,7 @@ public sealed class ResultTests
     {
         var result = Result.Err<int, string>("error");
         var mapped = result.Select(x => x * 2);
-        Assert.IsTrue(mapped.IsErr);
+        Assert.IsTrue(mapped.IsErr());
         Assert.AreEqual("error", mapped.UnwrapErr());
     }
 
@@ -790,7 +776,7 @@ public sealed class ResultTests
     {
         var result = Result.Ok<int, string>(5);
         var chained = result.SelectMany(x => Result.Ok<int, string>(x * 2));
-        Assert.IsTrue(chained.IsOk);
+        Assert.IsTrue(chained.IsOk());
         Assert.AreEqual(10, chained.Unwrap());
     }
 
@@ -799,7 +785,7 @@ public sealed class ResultTests
     {
         var result = Result.Err<int, string>("error");
         var chained = result.SelectMany(x => Result.Ok<int, string>(x * 2));
-        Assert.IsTrue(chained.IsErr);
+        Assert.IsTrue(chained.IsErr());
         Assert.AreEqual("error", chained.UnwrapErr());
     }
 
@@ -808,7 +794,7 @@ public sealed class ResultTests
     {
         var result = Result.Ok<int, string>(5);
         var chained = result.SelectMany(x => Result.Err<int, string>("inner error"));
-        Assert.IsTrue(chained.IsErr);
+        Assert.IsTrue(chained.IsErr());
         Assert.AreEqual("inner error", chained.UnwrapErr());
     }
 
@@ -822,7 +808,7 @@ public sealed class ResultTests
                        from b in result2
                        select a + b;
 
-        Assert.IsTrue(combined.IsOk);
+        Assert.IsTrue(combined.IsOk());
         Assert.AreEqual(30, combined.Unwrap());
     }
 
@@ -836,7 +822,7 @@ public sealed class ResultTests
                        from b in result2
                        select a + b;
 
-        Assert.IsTrue(combined.IsErr);
+        Assert.IsTrue(combined.IsErr());
         Assert.AreEqual("error", combined.UnwrapErr());
     }
 
@@ -891,7 +877,7 @@ public sealed class ResultTests
             await Task.Delay(1);
             return x * 2;
         });
-        Assert.IsTrue(mapped.IsOk);
+        Assert.IsTrue(mapped.IsOk());
         Assert.AreEqual(10, mapped.Unwrap());
     }
 
@@ -904,7 +890,7 @@ public sealed class ResultTests
             await Task.Delay(1);
             return x * 2;
         });
-        Assert.IsTrue(mapped.IsErr);
+        Assert.IsTrue(mapped.IsErr());
         Assert.AreEqual("error", mapped.UnwrapErr());
     }
 
@@ -917,7 +903,7 @@ public sealed class ResultTests
             await Task.Delay(1);
             return Result.Ok<int, string>(x * 2);
         });
-        Assert.IsTrue(chained.IsOk);
+        Assert.IsTrue(chained.IsOk());
         Assert.AreEqual(10, chained.Unwrap());
     }
 
@@ -930,7 +916,7 @@ public sealed class ResultTests
             await Task.Delay(1);
             return Result.Err<int, string>("failed");
         });
-        Assert.IsTrue(chained.IsErr);
+        Assert.IsTrue(chained.IsErr());
         Assert.AreEqual("failed", chained.UnwrapErr());
     }
 
@@ -939,7 +925,7 @@ public sealed class ResultTests
     {
         var resultTask = Task.FromResult(Result.Ok<int, string>(5));
         var mapped = await resultTask.MapAsync(x => x * 2);
-        Assert.IsTrue(mapped.IsOk);
+        Assert.IsTrue(mapped.IsOk());
         Assert.AreEqual(10, mapped.Unwrap());
     }
 
@@ -975,7 +961,7 @@ public sealed class ResultTests
         });
 
         Assert.IsFalse(selectorCalled);
-        Assert.IsTrue(mapped.IsErr);
+        Assert.IsTrue(mapped.IsErr());
         Assert.AreEqual("error", mapped.UnwrapErr());
     }
 
@@ -993,7 +979,7 @@ public sealed class ResultTests
         });
 
         Assert.IsFalse(selectorCalled);
-        Assert.IsTrue(chained.IsErr);
+        Assert.IsTrue(chained.IsErr());
         Assert.AreEqual("error", chained.UnwrapErr());
     }
 
@@ -1014,7 +1000,7 @@ public sealed class ResultTests
             return x + 10;
         });
 
-        Assert.IsTrue(step2.IsOk);
+        Assert.IsTrue(step2.IsOk());
         Assert.AreEqual(20, step2.Unwrap());
     }
 
@@ -1035,7 +1021,7 @@ public sealed class ResultTests
             return x + 10;
         });
 
-        Assert.IsTrue(step2.IsErr);
+        Assert.IsTrue(step2.IsErr());
         Assert.AreEqual("initial error", step2.UnwrapErr());
     }
 
@@ -1044,7 +1030,7 @@ public sealed class ResultTests
     {
         var resultTask = Task.FromResult(Result.Err<int, string>("error"));
         var mapped = await resultTask.MapAsync(x => x * 2);
-        Assert.IsTrue(mapped.IsErr);
+        Assert.IsTrue(mapped.IsErr());
         Assert.AreEqual("error", mapped.UnwrapErr());
     }
 
@@ -1053,7 +1039,7 @@ public sealed class ResultTests
     {
         var resultTask = Task.FromResult(Result.Ok<int, string>(5));
         var chained = await resultTask.AndThenAsync(x => Result.Ok<int, string>(x * 2));
-        Assert.IsTrue(chained.IsOk);
+        Assert.IsTrue(chained.IsOk());
         Assert.AreEqual(10, chained.Unwrap());
     }
 
@@ -1062,7 +1048,7 @@ public sealed class ResultTests
     {
         var resultTask = Task.FromResult(Result.Err<int, string>("error"));
         var chained = await resultTask.AndThenAsync(x => Result.Ok<int, string>(x * 2));
-        Assert.IsTrue(chained.IsErr);
+        Assert.IsTrue(chained.IsErr());
         Assert.AreEqual("error", chained.UnwrapErr());
     }
 
@@ -1071,7 +1057,7 @@ public sealed class ResultTests
     {
         var resultTask = Task.FromResult(Result.Ok<int, string>(5));
         var chained = await resultTask.AndThenAsync(x => Result.Err<int, string>("selector error"));
-        Assert.IsTrue(chained.IsErr);
+        Assert.IsTrue(chained.IsErr());
         Assert.AreEqual("selector error", chained.UnwrapErr());
     }
 
@@ -1084,7 +1070,7 @@ public sealed class ResultTests
             await Task.Delay(1);
             return s.ToUpper();
         });
-        Assert.IsTrue(mapped.IsOk);
+        Assert.IsTrue(mapped.IsOk());
         Assert.AreEqual("HELLO", mapped.Unwrap());
     }
 
@@ -1097,7 +1083,7 @@ public sealed class ResultTests
             await Task.Delay(1);
             return n.ToString();
         });
-        Assert.IsTrue(mapped.IsOk);
+        Assert.IsTrue(mapped.IsOk());
         Assert.AreEqual("42", mapped.Unwrap());
     }
 
@@ -1114,7 +1100,7 @@ public sealed class ResultTests
                 : Result.Err<int, string>("Value too small");
         });
 
-        Assert.IsTrue(validated.IsOk);
+        Assert.IsTrue(validated.IsOk());
         Assert.AreEqual(10, validated.Unwrap());
     }
 
@@ -1131,7 +1117,7 @@ public sealed class ResultTests
                 : Result.Err<int, string>("Value too small");
         });
 
-        Assert.IsTrue(validated.IsErr);
+        Assert.IsTrue(validated.IsErr());
         Assert.AreEqual("Value too small", validated.UnwrapErr());
     }
 
@@ -1174,7 +1160,7 @@ public sealed class ResultTests
         Assert.AreEqual(10, mappedResults[0].UnwrapOr(0));
         Assert.AreEqual(20, mappedResults[1].UnwrapOr(0));
         Assert.AreEqual(0, mappedResults[2].UnwrapOr(0));
-        Assert.IsTrue(mappedResults[2].IsErr);
+        Assert.IsTrue(mappedResults[2].IsErr());
         Assert.AreEqual(40, mappedResults[3].UnwrapOr(0));
         Assert.AreEqual(50, mappedResults[4].UnwrapOr(0));
     }
@@ -1211,7 +1197,7 @@ public sealed class ResultTests
         var step1 = await result.AndThenAsync(ValidatePositiveAsync);
         var step2 = await step1.AndThenAsync(ValidateRangeAsync);
 
-        Assert.IsTrue(step2.IsOk);
+        Assert.IsTrue(step2.IsOk());
         Assert.AreEqual(42, step2.Unwrap());
 
         input = "invalid";
@@ -1219,7 +1205,7 @@ public sealed class ResultTests
         step1 = await result.AndThenAsync(ValidatePositiveAsync);
         step2 = await step1.AndThenAsync(ValidateRangeAsync);
 
-        Assert.IsTrue(step2.IsErr);
+        Assert.IsTrue(step2.IsErr());
         Assert.AreEqual("Failed to parse 'invalid'", step2.UnwrapErr());
 
         input = "-5";
@@ -1227,7 +1213,7 @@ public sealed class ResultTests
         step1 = await result.AndThenAsync(ValidatePositiveAsync);
         step2 = await step1.AndThenAsync(ValidateRangeAsync);
 
-        Assert.IsTrue(step2.IsErr);
+        Assert.IsTrue(step2.IsErr());
         Assert.AreEqual("Number must be positive", step2.UnwrapErr());
 
         input = "150";
@@ -1235,7 +1221,7 @@ public sealed class ResultTests
         step1 = await result.AndThenAsync(ValidatePositiveAsync);
         step2 = await step1.AndThenAsync(ValidateRangeAsync);
 
-        Assert.IsTrue(step2.IsErr);
+        Assert.IsTrue(step2.IsErr());
         Assert.AreEqual("Number must be <= 100", step2.UnwrapErr());
     }
 

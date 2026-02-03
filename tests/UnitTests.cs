@@ -73,9 +73,9 @@ public sealed class UnitTests
 
     [TestMethod]
     public void CanBeUsedInGenericContext()
-    {
-        var result = Rustify.Monads.Result<Unit, string>.Ok(Unit.New);
-        Assert.IsTrue(result.IsOk);
-        Assert.AreEqual(Unit.New, result.Unwrap());
-    }
+     {
+         var result = Rustify.Monads.Result<Unit, string>.Ok(Unit.New);
+         Assert.IsTrue(result.IsOk());
+         Assert.AreEqual(Unit.New, result.Unwrap());
+     }
 }
